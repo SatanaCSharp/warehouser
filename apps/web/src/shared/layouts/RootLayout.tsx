@@ -1,4 +1,3 @@
-import { Button } from '@heroui/react';
 import { buttonVariants } from '@heroui/styles';
 import {
   Link as RouterLink,
@@ -10,12 +9,10 @@ import { selectIsAuthenticated } from 'modules/auth/store/auth.selectors';
 import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Conditional } from 'shared/components/Conditional';
 import { ROUTES } from 'shared/constants/routes';
-import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
-import { MenuIcon } from 'shared/icons';
 import { Footer } from 'shared/layouts/Footer';
 import { LanguageSelector } from 'shared/layouts/LanguageSelector';
+import { NavigationDrawerToggle } from 'shared/layouts/NavigationDrawerToggle';
 import { RoutedContent } from 'shared/layouts/RoutedContent';
 import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import { WarehouseSwitcher } from 'shared/layouts/WarehouseSwitcher';
@@ -69,10 +66,6 @@ export const RootLayout = (): ReactElement => {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  // T11 / CR-AC-18 — the drawer toggle exists to open the sidebar's list, so it
-  // renders exactly when there is a list to open. Both components read the same
-  // predicate, so no context can offer a control that opens an empty drawer.
-  const hasNavigationList = useEnteredContext().kind !== 'none';
   const isSignUpRoute = pathname === ROUTES.SIGN_UP;
   const oppositeRoute = oppositeRouteOf(isSignUpRoute);
   const oppositePrompt = t(oppositePromptKey(isSignUpRoute));
@@ -128,17 +121,10 @@ export const RootLayout = (): ReactElement => {
             </div>
             <LanguageSelector />
             <SignOutButton />
-            <Conditional when={hasNavigationList}>
-              <Button
-                isIconOnly
-                variant="ghost"
-                aria-label={t('nav.toggle')}
-                className="sm:hidden"
-                onPress={onOpenDrawer}
-              >
-                <MenuIcon />
-              </Button>
-            </Conditional>
+            {/* T11 / CR-AC-18 — the toggle decides for itself whether there is
+                a list for its drawer to contain, so this shell carries no
+                navigation predicate that could drift from the rail's. */}
+            <NavigationDrawerToggle onOpen={onOpenDrawer} />
           </div>
         </header>
         <div className="w-full border-b border-border bg-surface px-6 py-3 sm:hidden">

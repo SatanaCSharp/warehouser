@@ -21,9 +21,17 @@ import { linearScale } from 'shared/utils/chart-scale';
  */
 
 /**
- * The scale's range. The frame draws the track at 150 px (Item 154 · track
- * 150) and narrower at 390, so a mark is measured onto the track's own width
- * rather than onto a pixel count that would overflow it at the other viewport.
+ * The scale's range. Every segment is a percentage of the track, so the track
+ * itself is sized by the cell it sits in (`w-full`) and a mark never needs a
+ * pixel count that would overflow it at another viewport.
+ *
+ * It used to be `w-16 sm:w-[150px]`: the same pixel width stated twice, once
+ * here and once on the column, with neither statement accounting for the
+ * padding `.table__cell` spends inside that width. The track was therefore wider
+ * than the content box holding it — a 166 px `scrollWidth` in a 150 px
+ * `clientWidth`, measured at 1348 x 812 — and the bar ran into the numeric
+ * column beside it. `w-full` states the width once, where the browser already
+ * knows the answer.
  */
 const FULL_TRACK = 100;
 
@@ -56,7 +64,7 @@ export const CoverageGapBar = ({
 
   return (
     <span
-      className="flex h-2.5 w-16 items-center gap-[2px] sm:w-[150px]"
+      className="flex h-2.5 w-full items-center gap-[2px]"
       style={{ backgroundColor: 'var(--chart-track)' }}
     >
       {drawn.map(({ colorVar, id, value }, index) => (

@@ -1,5 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { HeatGrid } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
+import {
+  PURCHASING_SPREAD_LIST_HEIGHT_PX,
+  PURCHASING_SPREAD_ROW_BOUNDS,
+} from 'modules/workspace/dashboard/utils/panel-list-budget';
+import { panelListStyle } from 'shared/utils/panel-list-density';
 import { describe, expect, it } from 'vitest';
 
 // design-handoff.md § Panel specifications (Purchasing Spread) — "the count
@@ -38,8 +43,24 @@ describe('HeatGrid', () => {
     },
   ];
 
+  /** The grid carries its Panel's own height budget and row height
+   * (`modules/workspace/dashboard/utils/panel-list-budget.ts`); the Panel
+   * derives them and this component only applies them, so its spec passes the
+   * same value `PurchasingSpreadPanel` does rather than inventing one. */
+  const listStyle = panelListStyle(
+    PURCHASING_SPREAD_LIST_HEIGHT_PX,
+    rows.length,
+    PURCHASING_SPREAD_ROW_BOUNDS,
+  );
+
   it('prints every cell count as text, so the fill is never the only encoding', () => {
-    render(<HeatGrid columns={['Draft', 'Ready']} rows={rows} />);
+    render(
+      <HeatGrid
+        columns={['Draft', 'Ready']}
+        listStyle={listStyle}
+        rows={rows}
+      />,
+    );
 
     expect(screen.getByText('12')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
@@ -48,7 +69,13 @@ describe('HeatGrid', () => {
   });
 
   it('names every row by its Warehouse, so the grid is readable with colour removed', () => {
-    render(<HeatGrid columns={['Draft', 'Ready']} rows={rows} />);
+    render(
+      <HeatGrid
+        columns={['Draft', 'Ready']}
+        listStyle={listStyle}
+        rows={rows}
+      />,
+    );
 
     expect(screen.getByText('Warehouse A')).toBeInTheDocument();
     expect(screen.getByText('Warehouse B')).toBeInTheDocument();
@@ -62,7 +89,11 @@ describe('HeatGrid', () => {
   // no cell is a control: everything focusable is the grid itself.
   it('offers no control to focus on any cell', () => {
     const { container } = render(
-      <HeatGrid columns={['Draft', 'Ready']} rows={rows} />,
+      <HeatGrid
+        columns={['Draft', 'Ready']}
+        listStyle={listStyle}
+        rows={rows}
+      />,
     );
 
     expect(container.querySelectorAll('button, a, input')).toHaveLength(0);
@@ -76,7 +107,11 @@ describe('HeatGrid', () => {
 
   it('never renders a status colour', () => {
     const { container } = render(
-      <HeatGrid columns={['Draft', 'Ready']} rows={rows} />,
+      <HeatGrid
+        columns={['Draft', 'Ready']}
+        listStyle={listStyle}
+        rows={rows}
+      />,
     );
 
     const html = container.innerHTML;

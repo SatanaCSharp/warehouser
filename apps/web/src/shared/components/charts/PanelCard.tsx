@@ -9,10 +9,11 @@ type PanelCardProps = {
   /** The Panel meta line, shown beside the title with no second line on
    * desktop (design-handoff.md § Component mapping). */
   meta: string;
-  /** Set when the row list beneath it has dropped below the 20px row-flex
-   * floor, so this Panel scrolls internally while the surface does not
-   * (design-handoff.md § Responsive behavior, ruled at the tasks gate
-   * 2026-09-21). */
+  /** What the Panel draws inside `Card.Content`. A Panel whose rows cannot all
+   * be seated at the 20px row-flex floor scrolls internally while the surface
+   * does not (design-handoff.md § Responsive behavior, ruled at the tasks gate
+   * 2026-09-21); that ceiling belongs to the list region the Panel renders
+   * here, not to the Card, so this component declares nothing for it. */
   children: ReactNode;
 };
 

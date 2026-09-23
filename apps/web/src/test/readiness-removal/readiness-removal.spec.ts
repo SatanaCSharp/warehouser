@@ -769,16 +769,20 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WarehousePermissionGate.tsx': 1,
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
-    'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
     // The sidebar's gates moved with its entries when `Sidebar.tsx` was split
-    // into `shared/layouts/sidebar/`: each context's entry set now owns the
-    // gates its own entries carry, and the shell that selects between the two
-    // sets carries none. The Warehouse count is delivery-addresses T21's six
-    // gated entries (five gates, opened and closed, plus the import) and the
-    // Workspace count is AC-30's administration entry plus `dashboards` T19's
-    // gated Dashboard entry (two gates, opened and closed, plus the import).
-    'shared/layouts/sidebar/components/WarehouseNavEntries.tsx': 12,
-    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 6,
+    // into `shared/layouts/sidebar/`, and moved again — from the element form
+    // to the descriptor form, §1 to §2 of the same decision — when the shell
+    // had to know whether the entered context offers this actor any entry at
+    // all before it renders the rail and the drawer toggle around it
+    // (CR-AC-18, dashboards AC-15). No gate was added, removed or widened by
+    // that move: each entry still names the same Permissions, now in the
+    // `permission` field `usePermittedItems` / `useWorkspacePermittedItems`
+    // reads, so one list answers both "which entries render" and "is there a
+    // list". Each count is the filter's two import lines plus its one call;
+    // the entry sets that render the result carry none.
+    'shared/hooks/projections/useWarehouseNavEntries.ts': 4,
+    'shared/hooks/projections/useWorkspaceNavEntries.ts': 4,
+    'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
   };
 
   it('keeps every gate and descriptor call site', () => {

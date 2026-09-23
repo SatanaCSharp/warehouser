@@ -1,6 +1,16 @@
 import { render, screen, within } from '@testing-library/react';
 import type { PurchasingSpreadPanel as PurchasingSpreadPanelBody } from '@warehouser/contracts/dashboards';
 import { PurchasingSpreadPanel } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel';
+import {
+  PURCHASING_SPREAD_LIST_HEIGHT_PX,
+  PURCHASING_SPREAD_ROW_BOUNDS,
+  ROW_TWO_PANEL_HEIGHT_PX,
+} from 'modules/workspace/dashboard/utils/panel-list-budget';
+import {
+  PANEL_CARD_CHROME_PX,
+  PANEL_LIST_HEADER_HEIGHT_PX,
+  PANEL_ROW_MAX_HEIGHT_PX,
+} from 'shared/utils/panel-list-density';
 import { describe, expect, it } from 'vitest';
 
 // T20 — the Purchasing Spread Panel drawn at the approved handoff's fidelity
@@ -87,6 +97,80 @@ const rowFor = (table: HTMLElement, label: string): HTMLTableRowElement => {
  * the one query that needs no knowledge of column order. */
 const cellWithCount = (row: HTMLTableRowElement, count: number): HTMLElement =>
   within(row).getByText(String(count));
+
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * jsdom lays nothing out, so these cases assert the constraints the Panel
+ * **declares** rather than pretending to measure them: the ceiling the grid
+ * region carries, the row height its cell spec fixes, and that the region and
+ * not the surface is what overflows. The defect below was measured in a
+ * browser at 1348 x 868 first — four rows at 45 px in a 348 px Panel where
+ * `design-handoff.md` § Grid geometry allows 312.
+ */
+
+/** What this Panel spends below its grid: the scale-legend line (16), the
+ * footnote line (16), and `.card__content`'s own `gap-1` on each side of the
+ * grid (4 + 4). The same numbers `PURCHASING_SPREAD_LIST_HEIGHT_PX` is derived
+ * from, restated so the budget arithmetic below is proven against the design
+ * rather than against itself. */
+const LEGEND_FOOTNOTE_AND_GAPS_PX = 16 + 16 + 4 + 4;
+
+/** `design-handoff.md` § Type and mark specs — "Heat-grid cell 84 × 30,
+ * radius 6, count printed in every cell". */
+const HEAT_CELL_HEIGHT_PX = 30;
+
+/** The grid region: the one element carrying the Panel's density rule — its
+ * height ceiling, its internal scroll, and the row height every cell reads. */
+const gridRegionOf = (container: HTMLElement): HTMLElement => {
+  const region = container.querySelector<HTMLElement>(
+    '[data-slot="table-scroll-container"]',
+  );
+
+  if (region === null) {
+    throw new Error('The Panel draws no grid region.');
+  }
+
+  return region;
+};
+
+const declaredRowHeight = (region: HTMLElement): string =>
+  region.style.getPropertyValue('--dashboard-row-height');
+
+/** The pixel figures of `clamp(MINpx, calc((LISTpx - HEADERpx) / N), MAXpx)`. */
+const pixelsIn = (declared: string): number[] =>
+  [...declared.matchAll(/(?<px>[\d.]+)px/gu)].map(({ groups }) =>
+    Number(groups?.px),
+  );
+
+const rowHeightBoundsOf = (
+  region: HTMLElement,
+): { maxPx: number; minPx: number } => {
+  const [minPx, , , maxPx] = pixelsIn(declaredRowHeight(region));
+
+  return { minPx, maxPx };
+};
+
+/** What the declared `clamp()` resolves to — the arithmetic CSS would do. */
+const rowHeightOf = (region: HTMLElement): number => {
+  const declared = declaredRowHeight(region);
+  const [min, listHeight, headerHeight, max] = pixelsIn(declared);
+  const divisor = Number(/\/\s*(?<rows>\d+)\)/u.exec(declared)?.groups?.rows);
+
+  return Math.min(Math.max((listHeight - headerHeight) / divisor, min), max);
+};
+
+/** A Workspace of `count` active Warehouses, so a row count the seeded
+ * Workspace never produces — §6 bounds one at 20 — can still be put to the
+ * rule. */
+const panelOf = (count: number): PurchasingSpreadPanelBody => ({
+  archivedWarehouseCount: 0,
+  warehouses: Array.from({ length: count }, (_unused, index) =>
+    spreadRow(`Warehouse ${index}`, [1, 2, 3, 4]),
+  ),
+});
 
 describe('PurchasingSpreadPanel', () => {
   it('draws a real table with a header row beneath its own h2, not a treegrid', () => {
@@ -221,6 +305,102 @@ describe('PurchasingSpreadPanel', () => {
       expect(cellWithCount(row, count)).toBeInTheDocument();
     }
     expect(table.textContent ?? '').not.toMatch(/\bonly\b/iu);
+  });
+
+  // `design-handoff.md` § Grid geometry — the Workspace grid is 639 = row 1
+  // 311 + gap 16 + row 2 **312**, and § Responsive behavior requires no
+  // scrolling at 1280 x 800. This Panel is row 2 (§ Panel order), and four
+  // rows at the `.table__cell` default (`px-4 py-3 text-sm` — 45 px measured)
+  // drew a 348 px Panel.
+  //
+  // The budget is asserted rather than measured, because jsdom lays nothing
+  // out: the ceiling the grid region declares, plus everything the Panel
+  // spends below it, is exactly the 312 px row 2 allows.
+  it('declares a grid ceiling that keeps the Panel inside its row-2 budget', () => {
+    const { container } = render(<PurchasingSpreadPanel panel={fullPanel} />);
+    const region = gridRegionOf(container);
+
+    expect(region.style.maxHeight).toBe(
+      `${PURCHASING_SPREAD_LIST_HEIGHT_PX}px`,
+    );
+    expect(
+      PURCHASING_SPREAD_LIST_HEIGHT_PX +
+        PANEL_CARD_CHROME_PX +
+        LEGEND_FOOTNOTE_AND_GAPS_PX,
+    ).toBe(ROW_TWO_PANEL_HEIGHT_PX);
+
+    // And the seeded Workspace's four active Warehouses, plus the header row,
+    // are seated inside that ceiling at the 30 px the cell spec fixes, so at
+    // that row count nothing scrolls.
+    const seeded = gridRegionOf(
+      render(<PurchasingSpreadPanel panel={panelOf(4)} />).container,
+    );
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 4 * rowHeightOf(seeded),
+    ).toBeLessThanOrEqual(PURCHASING_SPREAD_LIST_HEIGHT_PX);
+  });
+
+  // `design-handoff.md` § Responsive behavior → "Row-count pressure", ruled at
+  // the `tasks` gate 2026-09-21: **list rows flex between 20 px and 26 px;
+  // below 20 px the Panel scrolls internally while the surface does not.**
+  //
+  // A row here is one heat-grid cell tall, and § Type and mark specs fixes
+  // that cell at "84 × 30, radius 6, count printed in every cell". The count
+  // is printed *inside* the fill, so flexing the row down to the ruled 20-26
+  // would not be the density rule applied to this Panel — it would be the cell
+  // spec abandoned to win the pixels. The bounds are therefore a point at 30,
+  // above the ruled ceiling, and the second half of the rule carries the rest.
+  it('holds its rows at the thirty pixels the heat-grid cell spec fixes, whatever the row count', () => {
+    const roomy = gridRegionOf(
+      render(<PurchasingSpreadPanel panel={panelOf(2)} />).container,
+    );
+    const crowded = gridRegionOf(
+      render(<PurchasingSpreadPanel panel={panelOf(20)} />).container,
+    );
+
+    for (const region of [roomy, crowded]) {
+      expect(rowHeightBoundsOf(region)).toStrictEqual(
+        PURCHASING_SPREAD_ROW_BOUNDS,
+      );
+      expect(rowHeightOf(region)).toBe(HEAT_CELL_HEIGHT_PX);
+    }
+
+    expect(PURCHASING_SPREAD_ROW_BOUNDS).toStrictEqual({
+      minPx: HEAT_CELL_HEIGHT_PX,
+      maxPx: HEAT_CELL_HEIGHT_PX,
+    });
+    // Stated rather than implied: this Panel deliberately sits above the ruled
+    // ceiling, and does so because the design fixes the mark in pixels.
+    expect(HEAT_CELL_HEIGHT_PX).toBeGreaterThan(PANEL_ROW_MAX_HEIGHT_PX);
+  });
+
+  // The second half of the rule. §6 bounds a Workspace at 20 Warehouses, and
+  // twenty 30 px cells do not fit a 312 px Panel — so it is the **grid** that
+  // scrolls, not the surface. Every Warehouse is still shown, and the
+  // Dashboard still holds one screen.
+  it('scrolls the grid internally rather than the surface once the cells no longer fit', () => {
+    const crowded = gridRegionOf(
+      render(<PurchasingSpreadPanel panel={panelOf(20)} />).container,
+    );
+
+    expect(crowded.style.maxHeight).toBe(
+      `${PURCHASING_SPREAD_LIST_HEIGHT_PX}px`,
+    );
+    expect(crowded.className).toMatch(/\boverflow-y-auto\b/u);
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 20 * rowHeightOf(crowded),
+    ).toBeGreaterThan(PURCHASING_SPREAD_LIST_HEIGHT_PX);
+  });
+
+  // The other half of the same cell spec: every count cell is drawn to the
+  // row's own height, so the mark is the 30 px the design states rather than
+  // whatever its text happens to occupy, and keeps its radius 6.
+  it('draws every count cell to the row height at the radius the design fixes', () => {
+    const table = drawPanel(fullPanel);
+    const mark = cellWithCount(rowFor(table, 'Upper Bands'), 100);
+
+    expect(mark.className).toMatch(/h-\[var\(--dashboard-row-height\)\]/u);
+    expect(mark.className).toMatch(/rounded-\[6px\]/u);
   });
 
   // `design-handoff.md` § Accessibility — nothing here is interactive and no

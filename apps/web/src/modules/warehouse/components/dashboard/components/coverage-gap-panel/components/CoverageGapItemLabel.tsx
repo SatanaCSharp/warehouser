@@ -11,6 +11,14 @@ import { useTranslation } from 'react-i18next';
  * Remainder Row's label is translated *and* interpolated, so it is the case
  * that would have broken.
  *
+ * Both labels are `block`, not bare inline spans. `truncate` is
+ * `overflow: hidden` + `text-overflow: ellipsis` + `white-space: nowrap`, and
+ * CSS ignores `overflow` on a non-replaced inline box — so the class was
+ * present, the spec asserted it, and a long Item name still ran out of its
+ * column with no ellipsis. A block establishes the box the ellipsis needs and
+ * takes the cell's own width, which is what `design-handoff.md` § Truncation
+ * asks for.
+ *
  * A row carrying an `itemCount` rather than a `sku` is the Remainder Row, and
  * the component reads that itself rather than taking a `muted` flag plus a
  * pre-resolved label. That keeps the branch here, as an early-return guard,
@@ -32,11 +40,13 @@ export const CoverageGapItemLabel = ({
   const { t } = useTranslation('dashboard');
 
   if (sku !== undefined) {
-    return <span className="truncate font-normal text-foreground">{sku}</span>;
+    return (
+      <span className="block truncate font-normal text-foreground">{sku}</span>
+    );
   }
 
   return (
-    <span className="truncate font-medium text-muted">
+    <span className="block truncate font-medium text-muted">
       {t('panels.coverageGap.remainder', { count: itemCount ?? 0 })}
     </span>
   );

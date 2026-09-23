@@ -7,12 +7,17 @@ import type {
   HeatGridRow,
 } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
 import { HeatGrid } from 'modules/workspace/dashboard/components/components/purchasing-spread-panel/components/HeatGrid';
+import {
+  PURCHASING_SPREAD_LIST_HEIGHT_PX,
+  PURCHASING_SPREAD_ROW_BOUNDS,
+} from 'modules/workspace/dashboard/utils/panel-list-budget';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChartLegendItem } from 'shared/components/charts/ChartLegend';
 import { ChartLegend } from 'shared/components/charts/ChartLegend';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
+import { panelListStyle } from 'shared/utils/panel-list-density';
 
 /**
  * T20 — the Purchasing Spread Panel (AC-18; `design-handoff.md` § Panel
@@ -24,6 +29,22 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
  * This file owns what `HeatGrid` does not: the four-state coverage and its
  * bin boundaries (AC-18), the scale legend below the grid, the "Ready" column
  * head and its Panel-meta expansion, and the archived-Warehouse footnote.
+ *
+ * ## Geometry
+ *
+ * It also owns the grid's **height budget**, because that is a fact about
+ * which row of § Grid geometry this Panel occupies rather than about how a
+ * heat grid is drawn: row 2 is 312 px, and
+ * `modules/workspace/dashboard/utils/panel-list-budget.ts` takes the Card
+ * chrome and what this file draws below the grid out of it. The rule that
+ * budget is spent against is `shared/utils/panel-list-density.ts`, shared with
+ * the Warehouse Dashboard.
+ *
+ * The row height is a point rather than the ruled 20-26 flex, and
+ * `panel-list-budget.ts` records why: § Type and mark specs fixes the cell at
+ * 84 x 30 with its count printed inside, so past five Warehouses the grid
+ * scrolls inside the Card — the rule's own second half — rather than the cell
+ * spec being crushed to win the pixels.
  */
 
 type PurchasingSpreadState = PurchasingSpreadCell['state'];
@@ -119,7 +140,15 @@ export const PurchasingSpreadPanel = ({
       title={t('panels.purchasingSpread.title')}
       meta={t('panels.purchasingSpread.meta')}
     >
-      <HeatGrid columns={Object.values(columnLabels)} rows={rows} />
+      <HeatGrid
+        columns={Object.values(columnLabels)}
+        listStyle={panelListStyle(
+          PURCHASING_SPREAD_LIST_HEIGHT_PX,
+          rows.length,
+          PURCHASING_SPREAD_ROW_BOUNDS,
+        )}
+        rows={rows}
+      />
       <ChartLegend items={legend} />
       <PanelFootnote>
         {t('panels.purchasingSpread.footnote', {

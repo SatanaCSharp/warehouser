@@ -2,6 +2,7 @@ import { Drawer } from '@heroui/react';
 import type { ComponentType, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEnteredContext } from 'shared/hooks/projections/useEnteredContext';
+import { useHasNavigationList } from 'shared/hooks/projections/useHasNavigationList';
 import { useCollapsedSidebar } from 'shared/hooks/state/useCollapsedSidebar';
 import { SidebarCollapseToggle } from 'shared/layouts/sidebar/components/SidebarCollapseToggle';
 import { SidebarNavList } from 'shared/layouts/sidebar/components/SidebarNavList';
@@ -46,9 +47,10 @@ const navEntriesByContext: Record<
  *   and Access, in that order (frame `yGhkK`, design-handoff.md §Information
  *   architecture), all addressed within that `:warehouseId`. No Workspace
  *   destination appears.
- * - **Workspace view** — the Workspace administration entry only. No
- *   Warehouse-scoped destination appears.
- * - **No context** — at the root and around a refusal, no list and no `<nav>`
+ * - **Workspace view** — the Workspace Dashboard and the Workspace
+ *   administration entry. No Warehouse-scoped destination appears.
+ * - **Nothing to list** — at the root, around a refusal, and wherever the
+ *   entered context offers this actor no entry, no list and no `<nav>`
  *   landmark at all, rather than an empty one.
  *
  * This file owns the shell around either list and nothing inside it: the
@@ -74,14 +76,22 @@ export const Sidebar = ({
 }: SidebarProps = {}): ReactElement | null => {
   const { t } = useTranslation('common');
   const enteredContext = useEnteredContext();
+  const hasNavigationList = useHasNavigationList();
   const { isCollapsed, toggle } = useCollapsedSidebar();
 
   const onCloseDrawer = (): void => onOpenChange?.(false);
 
-  // CR-AC-18 — no context entered: render no list rather than an empty one, and
-  // no landmark to announce it. This is also the refusal case (CR-AC-07), whose
+  // CR-AC-18 — nothing to list: render no list rather than an empty one, and no
+  // landmark, no width control and no drawer to announce it. Three cases reach
+  // here. No context entered, at the root. The refusal case (CR-AC-07), whose
   // entries would be addressed inside a Warehouse the actor was just refused.
-  if (enteredContext.kind === 'none') {
+  // And a context whose every entry this actor may not see — reachable since
+  // `/workspace/dashboard` became a Workspace context, because dashboards AC-15
+  // renders its denial AT the address rather than redirecting away from it.
+  //
+  // The `kind` test is what narrows the lookup below; `useHasNavigationList` is
+  // false for it too, and is the same count the entries themselves come from.
+  if (enteredContext.kind === 'none' || !hasNavigationList) {
     return null;
   }
 

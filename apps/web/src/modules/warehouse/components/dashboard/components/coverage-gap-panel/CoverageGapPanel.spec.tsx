@@ -1,7 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
 import type { CoverageGapPanel as CoverageGapPanelBody } from '@warehouser/contracts/dashboards';
 import { CoverageGapPanel } from 'modules/warehouse/components/dashboard/components/coverage-gap-panel/CoverageGapPanel';
+import {
+  COVERAGE_GAP_LIST_HEIGHT_PX,
+  ROW_ONE_PANEL_HEIGHT_PX,
+} from 'modules/warehouse/utils/panel-list-budget';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
+import {
+  PANEL_CARD_CHROME_PX,
+  PANEL_LIST_HEADER_HEIGHT_PX,
+  PANEL_ROW_MAX_HEIGHT_PX,
+  PANEL_ROW_MIN_HEIGHT_PX,
+} from 'shared/utils/panel-list-density';
 import { describe, expect, it } from 'vitest';
 
 // T17 — the Coverage Gap Panel drawn at the approved handoff's fidelity
@@ -171,6 +181,139 @@ const printsFigure = (row: HTMLElement, text: string): void => {
     within(row).getByText(text, { normalizer: verbatim }),
   ).toBeInTheDocument();
 };
+
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * jsdom lays nothing out, so these cases assert the constraints the Panel
+ * **declares** rather than pretending to measure them: the ceiling the list
+ * region carries, the bounds of the row-height `clamp()`, and the classes that
+ * decide whether a head can be sliced. Each defect below was measured in a
+ * browser at 1348 x 812 first, and the declaration is what fixed it.
+ */
+
+/** What this Panel spends above its list: the legend line (16) plus
+ * `.card__content`'s own `gap-1` (4). The same two numbers
+ * `COVERAGE_GAP_LIST_HEIGHT_PX` is derived from, restated so the budget
+ * arithmetic below is proven against the design rather than against itself. */
+const LEGEND_AND_GAP_PX = 16 + 4;
+
+/** The list region: the one element carrying the Panel's density rule — its
+ * height ceiling, its internal scroll, and the row height every cell reads. */
+const listRegionOf = (container: HTMLElement): HTMLElement => {
+  const region = container.querySelector<HTMLElement>(
+    '[data-slot="table-scroll-container"]',
+  );
+
+  if (region === null) {
+    throw new Error('The Panel draws no list region.');
+  }
+
+  return region;
+};
+
+const declaredRowHeight = (region: HTMLElement): string =>
+  region.style.getPropertyValue('--dashboard-row-height');
+
+/** The pixel figures of `clamp(MINpx, calc((LISTpx - HEADERpx) / N), MAXpx)`. */
+const pixelsIn = (declared: string): number[] =>
+  [...declared.matchAll(/(?<px>[\d.]+)px/gu)].map(({ groups }) =>
+    Number(groups?.px),
+  );
+
+const rowHeightBoundsOf = (
+  region: HTMLElement,
+): { max: number; min: number } => {
+  const [min, , , max] = pixelsIn(declaredRowHeight(region));
+
+  return { min, max };
+};
+
+/** What the declared `clamp()` resolves to — the arithmetic CSS would do. */
+const rowHeightOf = (region: HTMLElement): number => {
+  const declared = declaredRowHeight(region);
+  const [min, listHeight, headerHeight, max] = pixelsIn(declared);
+  const divisor = Number(/\/\s*(?<rows>\d+)\)/u.exec(declared)?.groups?.rows);
+
+  return Math.min(Math.max((listHeight - headerHeight) / divisor, min), max);
+};
+
+/**
+ * The width a column head **declares**, in pixels — Tailwind's `w-<n>` being
+ * n × 4 px and `w-[Npx]` being N — or `null` for the one column that declares
+ * none.
+ *
+ * jsdom lays nothing out, so this reads the declaration rather than measuring
+ * anything. That is the whole assertion available here and it is the one worth
+ * having: the table is `table-fixed`, so a declared width *is* the column's
+ * width, and the single column without one absorbs whatever is left.
+ */
+const declaredWidthPx = (head: HTMLElement): number | null => {
+  const arbitrary = /(?<![a-z-])w-\[(?<px>\d+)px\]/u.exec(head.className);
+
+  if (arbitrary !== null) {
+    return Number(arbitrary.groups?.px);
+  }
+
+  const scaled = /(?<![a-z-])w-(?<steps>\d+)(?![\d[])/u.exec(head.className);
+
+  if (scaled === null) {
+    return null;
+  }
+
+  return Number(scaled.groups?.steps) * 4;
+};
+
+const totalOf = (widths: number[]): number =>
+  widths.reduce((running, width) => running + width, 0);
+
+/** The Panel's own inner width and the floor the table never compresses below:
+ * `design-handoff.md` § Grid geometry's Panel 488 less its 16 px padding. */
+const PANEL_INNER_WIDTH_PX = 456;
+
+/**
+ * What the shipped shell leaves this table with its navigation rail expanded,
+ * measured in Chrome — a 522 px card holding a 490 px table. It is 84 px
+ * narrower than the collapsed rail's 574, so it, not the roomy case, is what
+ * the column widths are judged against.
+ */
+const RAIL_EXPANDED_TABLE_WIDTH_PX = 490;
+
+/** Both `px-1` paddings `PANEL_LIST_CELL_CLASS` spends inside a column, which a
+ * declared width has to cover before any glyph is drawn. */
+const COLUMN_SIDE_PADDING_PX = 8;
+
+/**
+ * The narrowest the Item column is ever drawn: what the 456 px floor leaves
+ * once every other column has taken its declared width.
+ */
+const ITEM_COLUMN_FLOOR_PX = 100;
+
+/**
+ * "4 more Items" at 76 px — the widest label this Panel's row header prints,
+ * measured in Chrome at its `text-xs`, and a Remainder Row wording rather than
+ * an Item name. It is twelve characters, half of what § Truncation allows an
+ * Item, so truncating it is a starved column rather than the rule working.
+ * That is exactly what a 74 px Item column did: a 66 px content box, and
+ * "4 more It…".
+ */
+const WIDEST_ITEM_LABEL_PX = 76;
+
+/** A Panel of `count` Items, so a row count the projection never produces can
+ * still be put to the rule. */
+const panelOf = (count: number): CoverageGapPanelBody => ({
+  remainder: null,
+  rows: Array.from({ length: count }, (_unused, index) =>
+    gapRow(`SKU-${index}`, {
+      onHand: 10,
+      inbound: 10,
+      uncovered: 10,
+      total: 30,
+    }),
+  ),
+});
 
 describe('CoverageGapPanel', () => {
   // `design-handoff.md` § Accessibility — "Row-oriented Panels are tables with
@@ -348,11 +491,130 @@ describe('CoverageGapPanel', () => {
 
   // `design-handoff.md` § Truncation — an Item name past about 24 characters
   // truncates with an ellipsis in its column on desktop.
+  //
+  // `truncate` alone was not enough to produce one. It expands to
+  // `overflow: hidden` + `text-overflow: ellipsis` + `white-space: nowrap`, and
+  // CSS ignores `overflow` on a non-replaced **inline** box — so the class was
+  // present, this case passed, and a long SKU still ran out of its column with
+  // no ellipsis at all. The block is therefore asserted beside the class.
   it('truncates an Item name past about twenty-four characters', () => {
     const table = drawPanel(fullPanel);
 
     const name = within(table).getByText(LONG_SKU);
     expect(name.outerHTML).toMatch(/truncate|ellipsis/u);
+    expect(name.className).toMatch(/\bblock\b/u);
+  });
+
+  // `design-handoff.md` § Grid geometry — grid 639 = row 1 **355** + gap 16 +
+  // row 2 268, and § Responsive behavior requires no scrolling at 1280 x 800.
+  // Eleven rows at the `.table__cell` default (`px-4 py-3 text-sm` — 45 px
+  // measured) drew a 648 px Panel and put 272 px of scroll on the document.
+  //
+  // The budget is asserted rather than measured, because jsdom lays nothing
+  // out: the ceiling the list region declares, plus everything the Panel spends
+  // above it, is exactly the 355 px row 1 allows — so no row count can push the
+  // Panel past it.
+  it('declares a list ceiling that keeps the Panel inside its row-1 budget', () => {
+    const { container } = render(<CoverageGapPanel panel={fullPanel} />);
+    const region = listRegionOf(container);
+
+    expect(region.style.maxHeight).toBe(`${COVERAGE_GAP_LIST_HEIGHT_PX}px`);
+    expect(
+      COVERAGE_GAP_LIST_HEIGHT_PX + PANEL_CARD_CHROME_PX + LEGEND_AND_GAP_PX,
+    ).toBe(ROW_ONE_PANEL_HEIGHT_PX);
+
+    // And the eleven rows plus the header row are seated inside that ceiling at
+    // the height the rule resolves to, so at this row count nothing scrolls.
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 11 * rowHeightOf(region),
+    ).toBeLessThanOrEqual(COVERAGE_GAP_LIST_HEIGHT_PX);
+  });
+
+  // `design-handoff.md` § Responsive behavior → "Row-count pressure", ruled at
+  // the `tasks` gate 2026-09-21: **list rows flex between 20 px and 26 px; below
+  // 20 px the Panel scrolls internally while the surface does not.**
+  //
+  // Three row counts, because a single one cannot tell a rule from a constant:
+  // few rows reach the ceiling, eleven land between the bounds, and a count the
+  // budget cannot seat floors at 20 and hands the overflow to the Panel.
+  it('flexes a row between twenty and twenty-six pixels and never outside them', () => {
+    const roomy = listRegionOf(
+      render(<CoverageGapPanel panel={panelOf(3)} />).container,
+    );
+    const measured = listRegionOf(
+      render(<CoverageGapPanel panel={fullPanel} />).container,
+    );
+    const crowded = listRegionOf(
+      render(<CoverageGapPanel panel={panelOf(24)} />).container,
+    );
+
+    for (const region of [roomy, measured, crowded]) {
+      expect(rowHeightBoundsOf(region)).toStrictEqual({
+        min: PANEL_ROW_MIN_HEIGHT_PX,
+        max: PANEL_ROW_MAX_HEIGHT_PX,
+      });
+    }
+
+    expect(rowHeightOf(roomy)).toBe(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(rowHeightOf(measured)).toBeGreaterThan(PANEL_ROW_MIN_HEIGHT_PX);
+    expect(rowHeightOf(measured)).toBeLessThan(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(rowHeightOf(crowded)).toBe(PANEL_ROW_MIN_HEIGHT_PX);
+  });
+
+  // The second half of the same rule: past the floor it is the **Panel** that
+  // scrolls, not the surface. The ceiling does not move with the row count, and
+  // the region that carries it is the one that overflows.
+  it('scrolls the Panel internally rather than the surface once the floor is reached', () => {
+    const crowded = listRegionOf(
+      render(<CoverageGapPanel panel={panelOf(24)} />).container,
+    );
+
+    expect(crowded.style.maxHeight).toBe(`${COVERAGE_GAP_LIST_HEIGHT_PX}px`);
+    expect(crowded.className).toMatch(/\boverflow-y-auto\b/u);
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 24 * rowHeightOf(crowded),
+    ).toBeGreaterThan(COVERAGE_GAP_LIST_HEIGHT_PX);
+  });
+
+  // A column **head** may not be clipped — only a datum may truncate
+  // (`design-handoff.md` § Truncation). `.table__column` spends 32 px of a
+  // column's width on `px-4`, which left 12 px of a 44 px column and rendered
+  // "On order" as "On orde" and "Uncovered" as "Uncovere", sliced mid-glyph with
+  // no ellipsis. Each head now keeps the design's 8 px gap as 4 px of padding
+  // and may wrap onto the header row's second budgeted line instead.
+  it('leaves every column head room to wrap rather than slicing it', () => {
+    const table = drawPanel(fullPanel);
+    const heads = within(table).getAllByRole('columnheader');
+
+    expect(heads).toHaveLength(6);
+
+    for (const head of heads) {
+      expect(head.className).toMatch(/\bpx-1\b/u);
+      expect(head.className).toMatch(/\bwhitespace-normal\b/u);
+      expect(head.className).not.toMatch(/\btruncate\b/u);
+    }
+
+    // And the columns are never compressed below those widths: below the
+    // Panel's own inner width the table keeps them and `Table.ScrollContainer`
+    // scrolls, which is what stopped "On hand" degrading to "On han" at ~460 px.
+    expect(table.className).toMatch(/min-w-\[456px\]/u);
+  });
+
+  // The bar cell overflowed its column by exactly the 16 px `.table__cell`
+  // spends on `px-4`: a 150 px track stated in the mark was set inside a 150 px
+  // column, so the bar ran into the numeric column beside it (a 166 px
+  // `scrollWidth` in a 150 px `clientWidth`). The track is sized by its cell
+  // now, and states no pixel width of its own.
+  it('sizes the bar track to its cell rather than to a width that overflows it', () => {
+    const table = drawPanel(fullPanel);
+    const track = within(table)
+      .getByText('SKU-ALPHA')
+      .closest('tr')
+      ?.querySelector<HTMLElement>('[style*="--chart-track"]');
+
+    expect(track).not.toBeNull();
+    expect(track?.className).toMatch(/\bw-full\b/u);
+    expect(track?.className).not.toMatch(/(?<![a-z-])w-(?:\[|\d)/u);
   });
 
   // `design-handoff.md` § Responsive behavior — the mobile treatment is the
@@ -406,5 +668,116 @@ describe('CoverageGapPanel', () => {
     ).toStrictEqual([]);
 
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Column geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * A second `describe` rather than three more cases in the one above, because
+ * the block above is already at `max-lines-per-function`. These are the
+ * horizontal half of the same geometry the first block states vertically: what
+ * each column declares, what is left for the one that declares nothing, and
+ * which of the two alignments a change would take with it.
+ */
+describe('CoverageGapPanel column geometry', () => {
+  // The four numeric columns were widened on request — On hand and On order
+  // from 56, Uncovered from 70 — because 56 left a head measuring about 46 px
+  // ("On order") in a 48 px content box, one glyph from wrapping. The bar cell
+  // gave up the same 26 px (118 → 92), so the Item column pays nothing: the
+  // track is the one element on the row whose width carries no reading, since
+  // every quantity it divides is printed in a column of its own.
+  //
+  // Asserted as declarations, not measurements: the table is `table-fixed`, so
+  // what a column declares is what it gets, and pinning the six numbers is what
+  // stops one of them drifting back.
+  it('declares the widened numeric columns over a narrowed bar track, not over the Item column', () => {
+    const table = drawPanel(fullPanel);
+    const [item, coverage, onHand, onOrder, uncovered, total] =
+      within(table).getAllByRole('columnheader');
+
+    expect(declaredWidthPx(coverage)).toBe(92);
+    expect(declaredWidthPx(onHand)).toBe(64);
+    expect(declaredWidthPx(onOrder)).toBe(64);
+    expect(declaredWidthPx(uncovered)).toBe(80);
+    expect(declaredWidthPx(total)).toBe(56);
+
+    // The Item column declares none, which is what makes it the one that
+    // absorbs the remainder — and what makes every pixel above come out of it.
+    expect(declaredWidthPx(item)).toBeNull();
+  });
+
+  // No horizontal overflow at the narrowest width the shell gives this table,
+  // which is the rail-expanded 490 rather than the collapsed 574. The table is
+  // `table-fixed` at `w-full`, so it is exactly as wide as its container down
+  // to the 456 px floor it declares; below that `Table.ScrollContainer` scrolls
+  // rather than compressing a head. Nothing therefore overflows at 490 unless
+  // the fixed columns alone exceed it.
+  it('seats every fixed column inside the rail-expanded width and leaves the Item column the rest', () => {
+    const table = drawPanel(fullPanel);
+    const heads = within(table).getAllByRole('columnheader');
+
+    const fixed = heads
+      .map(declaredWidthPx)
+      .filter((width): width is number => width !== null);
+
+    // Five of the six declare a width; the sixth is Item, asserted above.
+    expect(fixed).toHaveLength(heads.length - 1);
+
+    const fixedTotal = totalOf(fixed);
+    expect(fixedTotal).toBe(356);
+    expect(fixedTotal).toBeLessThan(RAIL_EXPANDED_TABLE_WIDTH_PX);
+
+    // What is left for Item at each width. It is the column § Truncation lets
+    // truncate, so a small remainder costs an ellipsis rather than a clip — but
+    // the floor is where the names are judged, and the floor is the 456 px one.
+    expect(RAIL_EXPANDED_TABLE_WIDTH_PX - fixedTotal).toBe(134);
+    expect(PANEL_INNER_WIDTH_PX - fixedTotal).toBe(ITEM_COLUMN_FLOOR_PX);
+
+    // And the floor is wide enough for the labels the Panel actually prints.
+    // It was not when the widening came out of this column instead: at 74 the
+    // content box was 66 and the Remainder Row read "4 more It…".
+    expect(ITEM_COLUMN_FLOOR_PX - COLUMN_SIDE_PADDING_PX).toBeGreaterThan(
+      WIDEST_ITEM_LABEL_PX,
+    );
+
+    expect(table.className).toMatch(/\btable-fixed\b/u);
+    expect(table.className).toMatch(/min-w-\[456px\]/u);
+  });
+
+  // The heads of the numeric columns are centred over them; their figures stay
+  // right-aligned, because a `tabular-nums` quantity is read down the column
+  // against a shared right edge and centring would break that comparison.
+  //
+  // The two survive together only because alignment is declared in two places:
+  // on the `Table.Column`, which is the `<th>` alone, and on the span inside
+  // each `Table.Cell`. A rule moved onto the shared cell class would take both.
+  it('centres each numeric head while its figures stay right-aligned', () => {
+    const table = drawPanel(fullPanel);
+    const [item, , ...numeric] = within(table).getAllByRole('columnheader');
+
+    expect(numeric).toHaveLength(4);
+
+    for (const head of numeric) {
+      expect(head.className).toMatch(/\btext-center\b/u);
+      expect(head.className).not.toMatch(/\btext-(?:right|left|start)\b/u);
+    }
+
+    // The row header keeps its own alignment: centring "Item" would pull it
+    // off the left-aligned names beneath it.
+    expect(item.className).not.toMatch(/\btext-center\b/u);
+
+    const alpha = rowFor(table, 'SKU-ALPHA');
+
+    for (const figure of ['400', '600', `2${NBSP}980`, `3${NBSP}980`]) {
+      const printed = within(alpha).getByText(figure, {
+        normalizer: verbatim,
+      });
+
+      expect(printed.className).toMatch(/\btext-right\b/u);
+      expect(printed.className).toMatch(/\btabular-nums\b/u);
+    }
   });
 });

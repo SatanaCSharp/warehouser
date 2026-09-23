@@ -32,12 +32,14 @@ export const ReasonConcentrationLabel = ({
 
   if (label !== undefined) {
     return (
-      <span className="truncate font-normal text-foreground">{label}</span>
+      <span className="block truncate font-normal text-foreground">
+        {label}
+      </span>
     );
   }
 
   return (
-    <span className="truncate font-medium text-muted">
+    <span className="block truncate font-medium text-muted">
       {t('panels.reasonConcentration.remainder', { count: reasonCount ?? 0 })}
     </span>
   );

@@ -1,7 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReasonConcentrationPanel as ReasonConcentrationPanelBody } from '@warehouser/contracts/dashboards';
 import { ReasonConcentrationPanel } from 'modules/warehouse/components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel';
+import {
+  REASON_CONCENTRATION_LIST_HEIGHT_PX,
+  ROW_ONE_PANEL_HEIGHT_PX,
+} from 'modules/warehouse/utils/panel-list-budget';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
+import {
+  PANEL_CARD_CHROME_PX,
+  PANEL_LIST_HEADER_HEIGHT_PX,
+  PANEL_ROW_MAX_HEIGHT_PX,
+  PANEL_ROW_MIN_HEIGHT_PX,
+} from 'shared/utils/panel-list-density';
 import { describe, expect, it } from 'vitest';
 
 // T17 — the Reason Concentration Panel drawn at the approved handoff's
@@ -173,6 +183,149 @@ const printsFigure = (row: HTMLElement, text: string): void => {
   ).toBeInTheDocument();
 };
 
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * jsdom lays nothing out, so these cases assert what the Panel **declares** —
+ * the list region's ceiling, the bounds of the row-height `clamp()`, and the
+ * classes that decide whether a head or a figure can be sliced. Each defect was
+ * measured in a browser at 1348 x 812 first: a 513 px table inside a 490 px
+ * card, "Cum." rendered as "Cu" with its figures cut at the card edge,
+ * "Undecided" as "Undecid", and 65 px rows against the design's 26, because the
+ * refused figure wrapped below its own bar.
+ */
+
+/** The list region: the one element carrying the density rule — its height
+ * ceiling, its internal scroll, and the row height every cell reads. */
+const listRegionOf = (container: HTMLElement): HTMLElement => {
+  const region = container.querySelector<HTMLElement>(
+    '[data-slot="table-scroll-container"]',
+  );
+
+  if (region === null) {
+    throw new Error('The Panel draws no list region.');
+  }
+
+  return region;
+};
+
+const declaredRowHeight = (region: HTMLElement): string =>
+  region.style.getPropertyValue('--dashboard-row-height');
+
+/** The pixel figures of `clamp(MINpx, calc((LISTpx - HEADERpx) / N), MAXpx)`. */
+const pixelsIn = (declared: string): number[] =>
+  [...declared.matchAll(/(?<px>[\d.]+)px/gu)].map(({ groups }) =>
+    Number(groups?.px),
+  );
+
+const rowHeightBoundsOf = (
+  region: HTMLElement,
+): { max: number; min: number } => {
+  const [min, , , max] = pixelsIn(declaredRowHeight(region));
+
+  return { min, max };
+};
+
+/** What the declared `clamp()` resolves to — the arithmetic CSS would do. */
+const rowHeightOf = (region: HTMLElement): number => {
+  const declared = declaredRowHeight(region);
+  const [min, listHeight, headerHeight, max] = pixelsIn(declared);
+  const divisor = Number(/\/\s*(?<rows>\d+)\)/u.exec(declared)?.groups?.rows);
+
+  return Math.min(Math.max((listHeight - headerHeight) / divisor, min), max);
+};
+
+/**
+ * The width a column head **declares**, in pixels — Tailwind's `w-<n>` being
+ * n × 4 px and `w-[Npx]` being N — or `null` for the one column that declares
+ * none. jsdom lays nothing out, so the declaration is what is asserted; the
+ * table is `table-fixed`, so a declared width *is* the column's width and the
+ * column without one absorbs the remainder.
+ */
+const declaredWidthPx = (head: HTMLElement): number | null => {
+  const arbitrary = /(?<![a-z-])w-\[(?<px>\d+)px\]/u.exec(head.className);
+
+  if (arbitrary !== null) {
+    return Number(arbitrary.groups?.px);
+  }
+
+  const scaled = /(?<![a-z-])w-(?<steps>\d+)(?![\d[])/u.exec(head.className);
+
+  if (scaled === null) {
+    return null;
+  }
+
+  return Number(scaled.groups?.steps) * 4;
+};
+
+const totalOf = (widths: number[]): number =>
+  widths.reduce((running, width) => running + width, 0);
+
+/** The Panel's own inner width and the floor the table never compresses below:
+ * `design-handoff.md` § Grid geometry's Panel 488 less its 16 px padding. */
+const PANEL_INNER_WIDTH_PX = 456;
+
+/**
+ * What the shipped shell leaves this table with its navigation rail expanded,
+ * measured in Chrome — a 522 px card holding a 490 px table, 84 px narrower
+ * than the collapsed rail's 574. It is the width the columns are judged
+ * against.
+ */
+const RAIL_EXPANDED_TABLE_WIDTH_PX = 490;
+
+/** Both `px-1` paddings `PANEL_LIST_COLUMN_CLASS` spends inside a column, which
+ * a declared width has to cover before any glyph is drawn. */
+const COLUMN_SIDE_PADDING_PX = 8;
+
+/**
+ * `100%` — the widest figure the running-share column ever prints — at 34 px,
+ * measured in Chrome at this Panel's `text-xs` `tabular-nums`. The column
+ * declared 40 px before this change, which is a 32 px content box: the figure
+ * was two pixels from being sliced, on the row every Panel eventually draws.
+ */
+const WIDEST_SHARE_FIGURE_PX = 34;
+
+/**
+ * The narrowest the Reason column is ever drawn: what the 456 px floor leaves
+ * once every other column has taken its declared width.
+ */
+const REASON_COLUMN_FLOOR_PX = 148;
+
+/**
+ * "Documentation missing" at 133 px — the widest Reason this Warehouse names
+ * that § Truncation still expects to fit, measured in Chrome at this Panel's
+ * `text-xs`. It is 21 characters, which is the threshold itself ("longer than
+ * about 21 characters … truncates"), so it is the last wording the column has
+ * to seat whole.
+ *
+ * The one Reason above it is "Packaging not as instructed" at 157 px and 27
+ * characters — past the threshold, and deliberately left to truncate. Seating
+ * it would have cost another 24 px, all of it out of a bar track that has none
+ * to give.
+ */
+const WIDEST_UNTRUNCATED_REASON_PX = 133;
+
+/** A Panel of `count` Reasons, so a row count the projection never produces can
+ * still be put to the rule. */
+const panelOf = (count: number): ReasonConcentrationPanelBody => ({
+  remainder: null,
+  totalRefusedQuantity: count * 100,
+  rows: Array.from({ length: count }, (_unused, index) =>
+    reasonRow(`reason_${index}`, `Reason ${index}`, {
+      refused: 100,
+      undecided: 10,
+      byCustomer: 10,
+      cumulative: 100,
+    }),
+  ),
+});
+
+/** The eight rows the seeded Warehouse produces, which is the row count the
+ * one-screen budget was measured against. */
+const EIGHT_ROWS = 8;
+
 describe('ReasonConcentrationPanel', () => {
   // `design-handoff.md` § Accessibility — "Row-oriented Panels are tables with
   // a header row … so a screen reader announces the Reason with each figure",
@@ -317,11 +470,131 @@ describe('ReasonConcentrationPanel', () => {
 
   // `design-handoff.md` § Truncation — a Rejection Reason longer than about 21
   // characters truncates with an ellipsis in its column on desktop.
+  // `truncate` on its own produced no ellipsis: it expands to
+  // `overflow: hidden` + `text-overflow: ellipsis` + `white-space: nowrap`, and
+  // CSS ignores `overflow` on a non-replaced **inline** box, so a long Reason ran
+  // out of its column instead. The block the ellipsis needs is asserted with it.
   it('truncates a Reason wording past about twenty-one characters', () => {
     const table = drawPanel(fullPanel);
 
     const wording = within(table).getByText(LONG_REASON);
     expect(wording.outerHTML).toMatch(/truncate|ellipsis/u);
+    expect(wording.className).toMatch(/\bblock\b/u);
+  });
+
+  // `design-handoff.md` § Grid geometry — grid 639 = row 1 **355** + gap 16 +
+  // row 2 268, and § Responsive behavior requires no scrolling at 1280 x 800.
+  // This Panel drew 65 px rows against the design's 26 and, with Coverage Gap
+  // beside it, put 272 px of scroll on the document.
+  it('declares a list ceiling that keeps the Panel inside its row-1 budget', () => {
+    const { container } = render(
+      <ReasonConcentrationPanel panel={panelOf(EIGHT_ROWS)} />,
+    );
+    const region = listRegionOf(container);
+
+    // Nothing is drawn above this Panel's list, so the whole of what row 1
+    // leaves after the Card chrome is the list's.
+    expect(region.style.maxHeight).toBe(
+      `${REASON_CONCENTRATION_LIST_HEIGHT_PX}px`,
+    );
+    expect(REASON_CONCENTRATION_LIST_HEIGHT_PX + PANEL_CARD_CHROME_PX).toBe(
+      ROW_ONE_PANEL_HEIGHT_PX,
+    );
+
+    // Eight rows at the design's own 26 px, header row included, sit inside it.
+    expect(rowHeightOf(region)).toBe(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + EIGHT_ROWS * rowHeightOf(region),
+    ).toBeLessThanOrEqual(REASON_CONCENTRATION_LIST_HEIGHT_PX);
+  });
+
+  // `design-handoff.md` § Responsive behavior → "Row-count pressure", ruled at
+  // the `tasks` gate 2026-09-21: **list rows flex between 20 px and 26 px; below
+  // 20 px the Panel scrolls internally while the surface does not.** Three row
+  // counts, because one cannot tell a rule from a constant.
+  it('flexes a row between twenty and twenty-six pixels and never outside them', () => {
+    const roomy = listRegionOf(
+      render(<ReasonConcentrationPanel panel={panelOf(EIGHT_ROWS)} />)
+        .container,
+    );
+    const measured = listRegionOf(
+      render(<ReasonConcentrationPanel panel={fullPanel} />).container,
+    );
+    const crowded = listRegionOf(
+      render(<ReasonConcentrationPanel panel={panelOf(26)} />).container,
+    );
+
+    for (const region of [roomy, measured, crowded]) {
+      expect(rowHeightBoundsOf(region)).toStrictEqual({
+        min: PANEL_ROW_MIN_HEIGHT_PX,
+        max: PANEL_ROW_MAX_HEIGHT_PX,
+      });
+    }
+
+    expect(rowHeightOf(roomy)).toBe(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(rowHeightOf(measured)).toBeGreaterThan(PANEL_ROW_MIN_HEIGHT_PX);
+    expect(rowHeightOf(measured)).toBeLessThan(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(rowHeightOf(crowded)).toBe(PANEL_ROW_MIN_HEIGHT_PX);
+  });
+
+  // The second half of the rule: past the floor the **Panel** scrolls, not the
+  // surface. The ceiling does not move with the row count.
+  it('scrolls the Panel internally rather than the surface once the floor is reached', () => {
+    const crowded = listRegionOf(
+      render(<ReasonConcentrationPanel panel={panelOf(26)} />).container,
+    );
+
+    expect(crowded.style.maxHeight).toBe(
+      `${REASON_CONCENTRATION_LIST_HEIGHT_PX}px`,
+    );
+    expect(crowded.className).toMatch(/\boverflow-y-auto\b/u);
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 26 * rowHeightOf(crowded),
+    ).toBeGreaterThan(REASON_CONCENTRATION_LIST_HEIGHT_PX);
+  });
+
+  // A column **head** may not be clipped — only a datum may truncate
+  // (`design-handoff.md` § Truncation). `.table__column` spends 32 px of a
+  // column's width on `px-4`, which is what left "Cum." as "Cu" in a 32 px
+  // column and "Undecided" as "Undecid". Each head keeps the design's 6 px gap
+  // as side padding and may wrap onto the header row's second budgeted line.
+  it('leaves every column head room to wrap rather than slicing it', () => {
+    const table = drawPanel(fullPanel);
+    const heads = within(table).getAllByRole('columnheader');
+
+    expect(heads).toHaveLength(5);
+
+    for (const head of heads) {
+      expect(head.className).toMatch(/\bpx-1\b/u);
+      expect(head.className).toMatch(/\bwhitespace-normal\b/u);
+      expect(head.className).not.toMatch(/\btruncate\b/u);
+    }
+
+    // The five columns sum to the Panel's own inner width rather than past the
+    // card, so nothing overflows horizontally at desktop width; below it the
+    // table keeps its widths and `Table.ScrollContainer` scrolls.
+    expect(table.className).toMatch(/min-w-\[456px\]/u);
+  });
+
+  // The refused figure sat **below** its bar rather than beside it: an
+  // `inline-flex` 88 px track followed by the figure is one inline formatting
+  // context, so the figure wrapped the moment the cell was narrower than the two
+  // together — and that wrap is what made a 26 px row 65 px tall. A flex row
+  // with a growing track and a `flex-none` figure cannot wrap at any width.
+  it('keeps the refused figure beside its bar on one line', () => {
+    const table = drawPanel(fullPanel);
+    const cell = within(table).getByText(`2${NBSP}980`, {
+      normalizer: verbatim,
+    }).parentElement;
+
+    expect(cell).not.toBeNull();
+    expect(cell?.className).toMatch(/\bflex\b/u);
+    expect(cell?.className).toMatch(/\bwhitespace-nowrap\b/u);
+
+    const track = cell?.querySelector<HTMLElement>('[style*="--chart-track"]');
+    expect(track?.className).toMatch(/\bflex-1\b/u);
+    expect(track?.className).not.toMatch(/\binline-flex\b/u);
+    expect(track?.className).not.toMatch(/(?<![a-z-])w-(?:\[|\d)/u);
   });
 
   // `design-handoff.md` § Responsive behavior — the mobile treatment is the
@@ -366,5 +639,119 @@ describe('ReasonConcentrationPanel', () => {
       focusable.filter((element) => element.closest('[role="grid"]') === null),
     ).toStrictEqual([]);
     expect(container.innerHTML).not.toMatch(/--danger|--warning|--success/u);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Column geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * A second `describe` rather than three more cases in the one above, because
+ * the block above is already at `max-lines-per-function`. These are the
+ * horizontal half of the same geometry the first block states vertically: what
+ * each column declares, what is left for the one that declares nothing, and
+ * which of the two alignments a change would take with it.
+ */
+describe('ReasonConcentrationPanel column geometry', () => {
+  // The three numeric columns were widened on request, and the running-share
+  // column was two pixels from a defect while it was not: 40 px is a 32 px
+  // content box, against a `100%` that measures 34. Asserted as declarations —
+  // the table is `table-fixed`, so a declared width is the column's width.
+  it('declares the widened numeric columns and gives the running share room for a hundred per cent', () => {
+    const table = drawPanel(fullPanel);
+    const [reason, refused, undecided, byCustomer, cumulative] =
+      within(table).getAllByRole('columnheader');
+
+    // The bar cell funds the widening: 130 → 92, so the Reason column pays
+    // nothing for it. The track is `flex-1` beside a `flex-none` figure, so it
+    // is what absorbs the cut — and the figure it yields to is why the track's
+    // width carries no reading in the first place.
+    expect(declaredWidthPx(refused)).toBe(92);
+
+    expect(declaredWidthPx(undecided)).toBe(80);
+    expect(declaredWidthPx(byCustomer)).toBe(88);
+
+    const cumulativeWidth = declaredWidthPx(cumulative) ?? 0;
+    expect(cumulativeWidth).toBe(48);
+    expect(cumulativeWidth - COLUMN_SIDE_PADDING_PX).toBeGreaterThan(
+      WIDEST_SHARE_FIGURE_PX,
+    );
+
+    // The Reason column declares none, which is what makes it the one that
+    // absorbs the remainder.
+    expect(declaredWidthPx(reason)).toBeNull();
+  });
+
+  // No horizontal overflow at the narrowest width the shell gives this table,
+  // which is the rail-expanded 490 rather than the collapsed 574. The table is
+  // `table-fixed` at `w-full`, so it is exactly as wide as its container down
+  // to the 456 px floor it declares; below that `Table.ScrollContainer` scrolls
+  // rather than compressing a head. Nothing overflows at 490 unless the fixed
+  // columns alone exceed it — which is the regression that put a 513 px table
+  // in a 490 px card and cut "Cum." to "Cu".
+  it('seats every fixed column inside the rail-expanded width and leaves the Reason column the rest', () => {
+    const table = drawPanel(fullPanel);
+    const heads = within(table).getAllByRole('columnheader');
+
+    const fixed = heads
+      .map(declaredWidthPx)
+      .filter((width): width is number => width !== null);
+
+    // Four of the five declare a width; the fifth is Reason, asserted above.
+    expect(fixed).toHaveLength(heads.length - 1);
+
+    const fixedTotal = totalOf(fixed);
+    expect(fixedTotal).toBe(308);
+    expect(fixedTotal).toBeLessThan(RAIL_EXPANDED_TABLE_WIDTH_PX);
+
+    // What is left for Reason at each width. The floor is where the wordings
+    // are judged, because it is the narrowest the column is ever drawn.
+    expect(RAIL_EXPANDED_TABLE_WIDTH_PX - fixedTotal).toBe(182);
+    expect(PANEL_INNER_WIDTH_PX - fixedTotal).toBe(REASON_COLUMN_FLOOR_PX);
+
+    // And the floor seats every wording § Truncation expects to fit. It did not
+    // when the widening came out of this column instead: at 110 the content box
+    // was 102 and seven of this Warehouse's eight Reasons truncated.
+    expect(REASON_COLUMN_FLOOR_PX - COLUMN_SIDE_PADDING_PX).toBeGreaterThan(
+      WIDEST_UNTRUNCATED_REASON_PX,
+    );
+
+    expect(table.className).toMatch(/\btable-fixed\b/u);
+    expect(table.className).toMatch(/min-w-\[456px\]/u);
+  });
+
+  // Every measure head is centred over its column; the figures beneath stay
+  // right-aligned, because a `tabular-nums` quantity is read down the column
+  // against a shared right edge and centring would break that comparison.
+  //
+  // The two survive together only because alignment is declared in two places:
+  // on the `Table.Column`, which is the `<th>` alone, and on the span inside
+  // each `Table.Cell`. A rule moved onto the shared cell class would take both.
+  it('centres each measure head while its figures stay right-aligned', () => {
+    const table = drawPanel(fullPanel);
+    const [reason, ...measures] = within(table).getAllByRole('columnheader');
+
+    expect(measures).toHaveLength(4);
+
+    for (const head of measures) {
+      expect(head.className).toMatch(/\btext-center\b/u);
+      expect(head.className).not.toMatch(/\btext-(?:right|left|start)\b/u);
+    }
+
+    // The row header keeps its own alignment: centring "Reason" would pull it
+    // off the left-aligned wordings beneath it.
+    expect(reason.className).not.toMatch(/\btext-center\b/u);
+
+    const damaged = rowFor(table, 'Damaged in transit');
+
+    for (const figure of ['640', '810', '40%']) {
+      const printed = within(damaged).getByText(figure, {
+        normalizer: verbatim,
+      });
+
+      expect(printed.className).toMatch(/\btext-right\b/u);
+      expect(printed.className).toMatch(/\btabular-nums\b/u);
+    }
   });
 });

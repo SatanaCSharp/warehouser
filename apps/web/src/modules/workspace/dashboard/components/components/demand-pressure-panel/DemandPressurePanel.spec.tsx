@@ -1,7 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
 import type { DemandPressurePanel as DemandPressurePanelBody } from '@warehouser/contracts/dashboards';
 import { DemandPressurePanel } from 'modules/workspace/dashboard/components/components/demand-pressure-panel/DemandPressurePanel';
+import {
+  DEMAND_PRESSURE_LIST_HEIGHT_PX,
+  DEMAND_PRESSURE_ROW_BOUNDS,
+  ROW_ONE_PANEL_HEIGHT_PX,
+} from 'modules/workspace/dashboard/utils/panel-list-budget';
 import { QUANTITY_GROUP_SEPARATOR } from 'shared/utils/number-format';
+import {
+  PANEL_CARD_CHROME_PX,
+  PANEL_LIST_HEADER_HEIGHT_PX,
+  PANEL_ROW_MAX_HEIGHT_PX,
+} from 'shared/utils/panel-list-density';
 import { describe, expect, it } from 'vitest';
 
 // T20 — the Demand Pressure Panel drawn at the approved handoff's fidelity
@@ -132,6 +142,86 @@ const trackWidthPercentOf = (row: HTMLElement): number =>
     return total + (Number.isNaN(percent) ? 0 : percent);
   }, 0);
 
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
+
+/**
+ * jsdom lays nothing out, so these cases assert the constraints the Panel
+ * **declares** rather than pretending to measure them: the ceiling the list
+ * region carries, the bounds of the row-height `clamp()`, and the two marks
+ * that decide how short a row may be. The defect below was measured in a
+ * browser at 1348 x 868 first — four rows at 51 px in a 357 px Panel where
+ * `design-handoff.md` § Grid geometry allows 311 — and the declaration is what
+ * fixes it.
+ */
+
+/** What this Panel spends beside its list: a legend line (16), a footnote line
+ * (16), and `.card__content`'s own `gap-1` on each side of the list (4 + 4).
+ * The same numbers `DEMAND_PRESSURE_LIST_HEIGHT_PX` is derived from, restated
+ * so the budget arithmetic below is proven against the design rather than
+ * against itself. */
+const LEGEND_FOOTNOTE_AND_GAPS_PX = 16 + 16 + 4 + 4;
+
+/** The bar `design-handoff.md` § Type and mark specs fixes at 12 px, over the
+ * three band figures § Accessibility requires printed, on their own 10 px
+ * line with 2 px between: the 24 px this Panel's row cannot go below. */
+const BAR_AND_BAND_FIGURES_PX = 12 + 2 + 10;
+
+/** The list region: the one element carrying the Panel's density rule — its
+ * height ceiling, its internal scroll, and the row height every cell reads. */
+const listRegionOf = (container: HTMLElement): HTMLElement => {
+  const region = container.querySelector<HTMLElement>(
+    '[data-slot="table-scroll-container"]',
+  );
+
+  if (region === null) {
+    throw new Error('The Panel draws no list region.');
+  }
+
+  return region;
+};
+
+const declaredRowHeight = (region: HTMLElement): string =>
+  region.style.getPropertyValue('--dashboard-row-height');
+
+/** The pixel figures of `clamp(MINpx, calc((LISTpx - HEADERpx) / N), MAXpx)`. */
+const pixelsIn = (declared: string): number[] =>
+  [...declared.matchAll(/(?<px>[\d.]+)px/gu)].map(({ groups }) =>
+    Number(groups?.px),
+  );
+
+const rowHeightBoundsOf = (
+  region: HTMLElement,
+): { maxPx: number; minPx: number } => {
+  const [minPx, , , maxPx] = pixelsIn(declaredRowHeight(region));
+
+  return { minPx, maxPx };
+};
+
+/** What the declared `clamp()` resolves to — the arithmetic CSS would do. */
+const rowHeightOf = (region: HTMLElement): number => {
+  const declared = declaredRowHeight(region);
+  const [min, listHeight, headerHeight, max] = pixelsIn(declared);
+  const divisor = Number(/\/\s*(?<rows>\d+)\)/u.exec(declared)?.groups?.rows);
+
+  return Math.min(Math.max((listHeight - headerHeight) / divisor, min), max);
+};
+
+/** A Workspace of `count` active Warehouses, so a row count the seeded
+ * Workspace never produces — §6 bounds one at 20 — can still be put to the
+ * rule. */
+const panelOf = (count: number): DemandPressurePanelBody => ({
+  archivedWarehouseCount: 0,
+  warehouses: Array.from({ length: count }, (_unused, index) =>
+    demandRow(`Warehouse ${index}`, {
+      overdueQuantity: 10,
+      dueSoonQuantity: 10,
+      laterQuantity: 10,
+    }),
+  ),
+});
+
 const printsFigure = (row: HTMLElement, text: string): void => {
   expect(
     within(row).getByText(text, { normalizer: verbatim }),
@@ -232,6 +322,98 @@ describe('DemandPressurePanel', () => {
     expect(
       screen.getAllByText(`10${NBSP}000`, { normalizer: verbatim }),
     ).toHaveLength(1);
+  });
+
+  // `design-handoff.md` § Grid geometry — the Workspace grid is 639 = row 1
+  // **311** + gap 16 + row 2 312, and § Responsive behavior requires no
+  // scrolling at 1280 x 800. This Panel is row 1 (§ Panel order), and four
+  // rows at the `.table__cell` default (`px-4 py-3 text-sm` — 51 px measured)
+  // drew a 357 px Panel, which on its own put the surface past one screen.
+  //
+  // The budget is asserted rather than measured, because jsdom lays nothing
+  // out: the ceiling the list region declares, plus everything the Panel
+  // spends beside it, is exactly the 311 px row 1 allows — so no row count can
+  // push the Panel past it.
+  it('declares a list ceiling that keeps the Panel inside its row-1 budget', () => {
+    const { container } = render(<DemandPressurePanel panel={fullPanel} />);
+    const region = listRegionOf(container);
+
+    expect(region.style.maxHeight).toBe(`${DEMAND_PRESSURE_LIST_HEIGHT_PX}px`);
+    expect(
+      DEMAND_PRESSURE_LIST_HEIGHT_PX +
+        PANEL_CARD_CHROME_PX +
+        LEGEND_FOOTNOTE_AND_GAPS_PX,
+    ).toBe(ROW_ONE_PANEL_HEIGHT_PX);
+
+    // And the seeded Workspace's four active Warehouses, plus the header row,
+    // are seated inside that ceiling at the height the rule resolves to, so at
+    // that row count nothing scrolls.
+    const seeded = listRegionOf(
+      render(<DemandPressurePanel panel={panelOf(4)} />).container,
+    );
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 4 * rowHeightOf(seeded),
+    ).toBeLessThanOrEqual(DEMAND_PRESSURE_LIST_HEIGHT_PX);
+  });
+
+  // `design-handoff.md` § Responsive behavior → "Row-count pressure", ruled at
+  // the `tasks` gate 2026-09-21: **list rows flex between 20 px and 26 px;
+  // below 20 px the Panel scrolls internally while the surface does not.**
+  //
+  // This Panel keeps the ruled ceiling and raises the floor to 24, because its
+  // row stacks the 12 px bar § Type and mark specs fixes over the three band
+  // figures § Accessibility requires printed. That is the rule applied, not
+  // evaded: the cell is `overflow-hidden`, so a shorter row would slice a
+  // figure rather than shrink it, and the scroll below carries the rest.
+  it('flexes a row inside the bounds its own marks admit and never outside them', () => {
+    const roomy = listRegionOf(
+      render(<DemandPressurePanel panel={panelOf(2)} />).container,
+    );
+    const crowded = listRegionOf(
+      render(<DemandPressurePanel panel={panelOf(20)} />).container,
+    );
+
+    for (const region of [roomy, crowded]) {
+      expect(rowHeightBoundsOf(region)).toStrictEqual(
+        DEMAND_PRESSURE_ROW_BOUNDS,
+      );
+    }
+
+    expect(DEMAND_PRESSURE_ROW_BOUNDS.maxPx).toBe(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(DEMAND_PRESSURE_ROW_BOUNDS.minPx).toBe(BAR_AND_BAND_FIGURES_PX);
+
+    expect(rowHeightOf(roomy)).toBe(PANEL_ROW_MAX_HEIGHT_PX);
+    expect(rowHeightOf(crowded)).toBe(DEMAND_PRESSURE_ROW_BOUNDS.minPx);
+  });
+
+  // The second half of the same rule: past the floor it is the **Panel** that
+  // scrolls, not the surface. The ceiling does not move with the row count,
+  // and the region that carries it is the one that overflows — so a Workspace
+  // at §6's bound of 20 Warehouses still shows every one of them without the
+  // Dashboard leaving one screen.
+  it('scrolls the Panel internally rather than the surface once the floor is reached', () => {
+    const crowded = listRegionOf(
+      render(<DemandPressurePanel panel={panelOf(20)} />).container,
+    );
+
+    expect(crowded.style.maxHeight).toBe(`${DEMAND_PRESSURE_LIST_HEIGHT_PX}px`);
+    expect(crowded.className).toMatch(/\boverflow-y-auto\b/u);
+    expect(
+      PANEL_LIST_HEADER_HEIGHT_PX + 20 * rowHeightOf(crowded),
+    ).toBeGreaterThan(DEMAND_PRESSURE_LIST_HEIGHT_PX);
+  });
+
+  // The two marks the floor is made of. `design-handoff.md` § Type and mark
+  // specs gives Demand Pressure a 12 px bar; it drew 10. Beneath it the three
+  // band figures sit on their own 10 px line rather than the 16 px `text-xs`
+  // line-height they inherited from the table — 12 + 2 + 10 is the 24 px floor
+  // the case above asserts, so neither mark may quietly grow back.
+  it('draws the bar at the twelve pixels the design fixes, over a band-figure line that fits the floor', () => {
+    const table = drawPanel(fullPanel);
+    const row = rowFor(table, 'Large Healthy');
+
+    expect(row.querySelector('span[class~="h-3"]')).not.toBeNull();
+    expect(row.querySelector('span[class~="leading-[10px]"]')).not.toBeNull();
   });
 
   // `design-handoff.md` § Accessibility — nothing here is interactive and no

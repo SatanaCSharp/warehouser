@@ -17,6 +17,15 @@ import { linearScale } from 'shared/utils/chart-scale';
  * The marks are `aria-hidden` because the figures beneath state the same three
  * values — removing colour loses nothing (`design-handoff.md`
  * § Accessibility, "Never colour alone").
+ *
+ * **The two lines are what fix this Panel's row floor.** The bar is 12 px by
+ * `design-handoff.md` § Type and mark specs ("Bar heights … Demand Pressure
+ * 12"); it drew 10. Beneath it the three band figures are set on their own
+ * 10 px line rather than the `text-xs` line-height they inherited from the
+ * table, which was 16. 12 + a 2 px gap + 10 is 24, and 24 is the floor
+ * `modules/workspace/dashboard/utils/panel-list-budget.ts` declares for the
+ * row: the list cell is `overflow-hidden`, so anything shorter would slice a
+ * figure instead of shrinking it.
  */
 
 /**
@@ -57,7 +66,7 @@ export const DemandPressureBar = ({
   return (
     <>
       <span
-        className="flex h-2.5 w-full items-stretch overflow-hidden rounded-[3px]"
+        className="flex h-3 w-full items-stretch overflow-hidden rounded-[3px]"
         style={{ backgroundColor: 'var(--chart-track)' }}
       >
         {segments.map(({ colorVar, id, value }) => (
@@ -72,7 +81,7 @@ export const DemandPressureBar = ({
           />
         ))}
       </span>
-      <span className="mt-0.5 flex gap-2 text-[10px] text-muted tabular-nums">
+      <span className="mt-0.5 flex gap-2 text-[10px] leading-[10px] text-muted tabular-nums">
         {segments.map(({ id, value }) => (
           <span key={id}>{quantity(value)}</span>
         ))}

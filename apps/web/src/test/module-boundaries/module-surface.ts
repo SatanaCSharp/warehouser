@@ -220,6 +220,23 @@ export const WORKSPACE_MODULE_MANIFEST = [
   // no hook belongs in `utils/`
   // (`docs/system/guides/placing-web-hooks.md` §3).
   'dashboard/utils/demand-pressure-series.ts',
+  // dashboards remediation — this surface's share of `design-handoff.md`
+  // § Grid geometry: its 311px row 1 and 312px row 2, what Demand Pressure and
+  // Purchasing Spread may spend on their lists, and the two row heights their
+  // own marks fix (a 12px bar over its printed band figures; an 84 x 30 heat
+  // cell). The rule those budgets are spent against is
+  // `shared/utils/panel-list-density.ts`, shared with the Warehouse Dashboard.
+  // Constants and no hook, so `utils/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/panel-list-budget.ts',
+  // dashboards remediation — the Receipt Reliability scatter's pixel geometry
+  // and label-collision placement, with its colocated spec. ADR 0002 names
+  // this arithmetic as the layout the repository owns and asks for it to be
+  // unit-tested directly rather than through a rendered chart; it declares no
+  // hook, so `utils/` is its directory
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/receipt-reliability-plot.spec.ts',
+  'dashboard/utils/receipt-reliability-plot.ts',
   'dashboard/utils/workspace-panel-reading.ts',
   // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
   // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
@@ -327,6 +344,16 @@ export const WAREHOUSE_MODULE_MANIFEST = [
   // (`react/only-export-components`), and a file that declares no hook
   // belongs in `utils/` (`docs/system/guides/placing-web-hooks.md` §3).
   'utils/coverage-gap-series.ts',
+  // dashboards remediation — this surface's share of `design-handoff.md`
+  // § Grid geometry: the 355px row 1 and what each of its two row-oriented
+  // Panels may spend on its list. The row-density *rule* those budgets are
+  // spent against moved to `shared/utils/panel-list-density.ts` once the
+  // Workspace Dashboard's Panels became its second consumer — it is generic
+  // and no domain entity owns it, which is the promotion test in
+  // `docs/system/frontend-architecture.md` § Source structure and
+  // `docs/system/guides/placing-web-hooks.md` §3. What stays here is the part
+  // that is this Dashboard's own. Constants and no hook, so `utils/`.
+  'utils/panel-list-budget.ts',
   // dashboards remediation — the Panel-standing type four query hooks return.
   // A type and no hook, so `utils/` rather than `hooks/`
   // (`docs/system/guides/placing-web-hooks.md` §3).

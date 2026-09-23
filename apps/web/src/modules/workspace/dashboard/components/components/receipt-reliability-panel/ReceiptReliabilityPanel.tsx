@@ -2,9 +2,17 @@ import type {
   ReceiptReliabilityPanel as ReceiptReliabilityPanelBody,
   ReceiptReliabilityWarehouse,
 } from '@warehouser/contracts/dashboards';
-import type { BubblePlotMark } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot';
 import { BubblePlot } from 'modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot';
+import type { ScatterMark } from 'modules/workspace/dashboard/utils/receipt-reliability-plot';
+import {
+  gridlinePositions,
+  markRadius,
+  plotGeometryFor,
+  plotMarks,
+  UNMEASURED_PLOT_WIDTH_PX,
+} from 'modules/workspace/dashboard/utils/receipt-reliability-plot';
 import type { ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PanelCard } from 'shared/components/charts/PanelCard';
 import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
@@ -14,11 +22,17 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
  * § Panel specifications, frame `ScGrF`).
  *
  * A bubble scatter built on `modules/workspace/dashboard/components/components/receipt-reliability-panel/components/BubblePlot`, which
- * draws a mark's position, size and direct label but knows nothing about
- * label collision. This file computes the marks' positions and radii, and
- * where two marks would collide, moves the later one's label aside itself
- * (`BubblePlot`'s own `labelOffsetX`/`labelAnchor`, added for exactly this)
- * rather than teaching the primitive a layout policy.
+ * draws marks and gridlines at the pixel offsets it is handed and decides
+ * none of them. This file owns the geometry: it measures the width the Card
+ * gives the plot, resolves the design's plot geometry for that width, sizes
+ * each mark and places each label through
+ * `modules/workspace/dashboard/utils/receipt-reliability-plot` — the pure
+ * arithmetic ADR 0002 says the repository owns and unit-tests directly.
+ *
+ * The plot is measured rather than drawn at a fixed size because the design
+ * states it in pixels (417 × 140 desktop, 278 × 200 mobile) inside a Card
+ * whose width is the grid's, not the design's: a fixed viewBox scaled to fit
+ * drew the whole plot at 140 × 140 in the middle of a 610px card.
  *
  * A Warehouse with no rate to report is **not plotted** (AC-20a) — it is
  * never read as the worst or the best performer. It is named instead in the
@@ -29,15 +43,6 @@ import { PanelFootnote } from 'shared/components/charts/PanelFootnote';
 
 /** The Panel's own fixed gridlines, 0 / 50 / 100 % (`design-handoff.md`). */
 const RECEIPT_RELIABILITY_GRIDLINES = [0, 50, 100];
-
-/** `r = 16 × √(received ÷ max received)` on desktop (`design-handoff.md`
- * § Type and mark specs); a mobile caller passes `12` (§ Responsive
- * behavior). */
-const DEFAULT_MAX_RADIUS = 16;
-
-/** How far past a mark's own edge a collision-avoided label is pushed
- * aside. */
-const LABEL_ASIDE_GAP = 4;
 
 type PlottableWarehouse = ReceiptReliabilityWarehouse & {
   onTimeArrivalRatePercent: number;
@@ -57,48 +62,41 @@ const isPlottable = (
   warehouse.onTimeArrivalRatePercent !== null &&
   warehouse.conformanceRatePercent !== null;
 
-/**
- * Moves a colliding label aside rather than centred below its mark. Two
- * marks "collide" when they sit at the exact same (x, y); the first mark at
- * a point keeps the default centred label and every later one at the same
- * point is pushed aside, so no two labels ever draw on top of each other
- * (`design-handoff.md` § Panel specifications — Receipt Reliability, "moved
- * to the side where that would collide").
- */
-const withCollisionAvoidedLabels = (
-  marks: BubblePlotMark[],
-): BubblePlotMark[] => {
-  const occurrencesByPoint = new Map<string, number>();
-
-  return marks.map((mark) => {
-    const point = `${mark.x}:${mark.y}`;
-    const occurrence = occurrencesByPoint.get(point) ?? 0;
-    occurrencesByPoint.set(point, occurrence + 1);
-
-    if (occurrence === 0) {
-      return mark;
-    }
-
-    return {
-      ...mark,
-      labelOffsetX: mark.r + LABEL_ASIDE_GAP,
-      labelAnchor: 'start',
-    };
-  });
-};
-
 type ReceiptReliabilityPanelProps = {
   panel: ReceiptReliabilityPanelBody;
-  /** The largest radius a mark takes, in the plot's own 0-100 viewBox units.
-   * A mobile caller passes `12` (`design-handoff.md` § Responsive
-   * behavior). */
 };
 
 export const ReceiptReliabilityPanel = ({
   panel,
 }: ReceiptReliabilityPanelProps): ReactElement => {
   const { t } = useTranslation('dashboard');
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [plotWidth, setPlotWidth] = useState(UNMEASURED_PLOT_WIDTH_PX);
 
+  // The Card decides how wide the plot is, so the plot asks it rather than
+  // assuming the design's own 417. A width of zero is jsdom, which lays
+  // nothing out; the design's desktop width stands in for it, which is also
+  // what the very first paint draws before the observer reports.
+  useEffect(() => {
+    const element = plotRef.current;
+    const measure = (): void => {
+      const width = element?.getBoundingClientRect().width ?? 0;
+
+      if (width > 0) {
+        setPlotWidth(width);
+      }
+    };
+    const observer = new ResizeObserver(measure);
+
+    if (element !== null) {
+      measure();
+      observer.observe(element);
+    }
+
+    return (): void => observer.disconnect();
+  }, []);
+
+  const geometry = plotGeometryFor(plotWidth);
   const plottedWarehouses = panel.warehouses.filter(isPlottable);
   const unratedWarehouses = panel.warehouses.filter(
     (warehouse) => !isPlottable(warehouse),
@@ -112,16 +110,19 @@ export const ReceiptReliabilityPanel = ({
     ...plottedWarehouses.map((warehouse) => warehouse.receivedQuantity),
   );
 
-  const marks = withCollisionAvoidedLabels(
-    plottedWarehouses.map((warehouse): BubblePlotMark => ({
+  const marks = plotMarks(
+    plottedWarehouses.map((warehouse): ScatterMark => ({
       id: warehouse.warehouseId,
       label: warehouse.warehouseName,
       x: warehouse.onTimeArrivalRatePercent,
       y: warehouse.conformanceRatePercent,
-      r:
-        DEFAULT_MAX_RADIUS *
-        Math.sqrt(warehouse.receivedQuantity / largestReceivedQuantity),
+      r: markRadius(
+        warehouse.receivedQuantity,
+        largestReceivedQuantity,
+        geometry,
+      ),
     })),
+    geometry,
   );
 
   // Every excluded Warehouse named beside its own six exclusion counts
@@ -150,10 +151,12 @@ export const ReceiptReliabilityPanel = ({
       title={t('panels.receiptReliability.title')}
       meta={t('panels.receiptReliability.meta')}
     >
-      <div role="img" aria-label={disclosure}>
+      <div ref={plotRef} role="img" aria-label={disclosure}>
         <BubblePlot
           marks={marks}
-          gridlineValues={RECEIPT_RELIABILITY_GRIDLINES}
+          gridlines={gridlinePositions(RECEIPT_RELIABILITY_GRIDLINES, geometry)}
+          width={geometry.width}
+          height={geometry.height}
         />
       </div>
       <PanelFootnote>{disclosure}</PanelFootnote>
