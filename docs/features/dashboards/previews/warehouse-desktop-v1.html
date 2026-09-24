@@ -1,0 +1,249 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Dashboards / Warehouse / Desktop / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       Zz5PK
+  Viewport:      desktop 1280×800
+  States:        all four Panels permitted; one screen with no scrolling at the 1280×800 threshold
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboards · Warehouse desktop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-chart-3a: var(--chart-3a);
+        --color-chart-3b: var(--chart-3b);
+        --color-chart-3c: var(--chart-3c);
+        --color-chart-4a: var(--chart-4a);
+        --color-chart-4b: var(--chart-4b);
+        --color-chart-4c: var(--chart-4c);
+        --color-chart-4d: var(--chart-4d);
+        --color-chart-supply: var(--chart-supply);
+        --color-chart-track: var(--chart-track);
+        --color-chart-grid: var(--chart-grid);
+
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+
+        /* Chart series tokens introduced by the `dashboards` design.
+           Ordinal ramps derived from --accent (oklch H 253.83); validated with
+           dataviz scripts/validate_palette.js --ordinal (light, surface #FFFFFF).
+           --chart-supply is categorical slot 2 (blue/orange pair, CVD dE 27.4). */
+        --chart-3a: #0058b6;
+        --chart-3b: #1181ec;
+        --chart-3c: #7aaeee;
+        --chart-4a: #0058b6;
+        --chart-4b: #0072e2;
+        --chart-4c: #4391eb;
+        --chart-4d: #7cafec;
+        --chart-supply: #eb6834;
+        --chart-track: var(--surface-secondary);
+        --chart-grid: var(--separator);
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+
+        --chart-3a: #0064bc;
+        --chart-3b: #1181ec;
+        --chart-3c: #6da3e4;
+        --chart-4a: #0064bc;
+        --chart-4b: #0076e4;
+        --chart-4c: #3f8ee7;
+        --chart-4d: #6fa4e4;
+        --chart-supply: #d95926;
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[1280px] max-w-full">
+<div class="flex h-[800px] w-[1280px] flex-col overflow-hidden bg-background"><header class="flex h-20 px-8 w-full shrink-0 items-center gap-3 border-b border-border bg-surface"><span class="grid size-[34px] place-items-center rounded-xl bg-accent text-accent-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg></span><span class="text-lg font-semibold tracking-tight text-foreground">Warehouser</span><span class="flex-1"></span><span class="inline-flex items-center gap-2 rounded-field bg-default px-3 py-2 text-sm text-default-foreground"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg>Central DC<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span><span class="inline-flex items-center rounded-field bg-default px-3 py-2 text-sm text-default-foreground">EN</span><span class="inline-flex items-center rounded-field bg-default px-3 py-2 text-sm text-default-foreground">Sign out</span></header><div class="flex min-h-0 w-full flex-1"><nav aria-label="Warehouse" class="w-60 shrink-0 border-r border-border bg-surface p-4"><ul class="flex flex-col gap-1"><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm bg-accent-soft font-medium text-accent-soft-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</span></li><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Demand</span></li><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Purchase drafts</span></li><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/></svg>Items</span></li><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 2v2"/><path d="M7 22v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><path d="M8 2v2"/><circle cx="12" cy="11" r="3"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>Customers</span></li><li><span class="flex w-full items-center gap-2.5 rounded-field px-3 py-2 text-sm text-muted"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>Access</span></li></ul></nav><div class="flex min-w-0 flex-1 flex-col gap-4 p-6"><div class="flex h-[355px] w-full gap-4"><article class="flex h-[355px] min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><div class="flex w-full items-center justify-between gap-3"><h2 class="text-sm font-semibold text-foreground">Coverage Gap</h2><p class="text-xs text-muted">Top 10 Items by uncovered quantity</p></div><div class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1"><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3a"></span><span class="text-xs text-muted">On hand</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3b"></span><span class="text-xs text-muted">On order</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3c"></span><span class="text-xs text-muted">Uncovered</span></span></div><div class="flex flex-col"><div class="flex h-[18px] items-center gap-2 text-xs font-medium text-muted"><span class="w-[154px]">Item</span><span class="w-[150px]"></span><span class="w-[70px] text-right">Uncovered</span><span class="w-[56px] text-right">Total</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Pallet wrap 250mm</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:6px" title="On hand: 120"></div><div class="h-[10px] bg-chart-3b" style="width:15px" title="On order: 300"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:48px" title="Uncovered: 980"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">980</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">1 400</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Carton 600×400</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:2px" title="On hand: 40"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:42px" title="Uncovered: 860"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">860</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">900</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Steel banding 19mm</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:15px" title="On hand: 310"></div><div class="h-[10px] bg-chart-3b" style="width:12px" title="On order: 240"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:34px" title="Uncovered: 705"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">705</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">1 255</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Edge protector L</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3b" style="width:9px" title="On order: 180"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:31px" title="Uncovered: 620"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">620</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">800</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Stretch film core</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:23px" title="On hand: 480"></div><div class="h-[10px] bg-chart-3b" style="width:6px" title="On order: 120"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:26px" title="Uncovered: 540"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">540</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">1 140</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Void fill 60L</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:5px" title="On hand: 95"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:20px" title="Uncovered: 405"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">405</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">500</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Label roll 100×150</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:58px" title="On hand: 1 200"></div><div class="h-[10px] bg-chart-3b" style="width:29px" title="On order: 600"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:18px" title="Uncovered: 380"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">380</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">2 180</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Strap buckle 16mm</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:11px" title="On hand: 220"></div><div class="h-[10px] bg-chart-3b" style="width:13px" title="On order: 260"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:13px" title="Uncovered: 260"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">260</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">740</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Corner board 1m</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:3px" title="On hand: 60"></div><div class="h-[10px] bg-chart-3b" style="width:2px" title="On order: 45"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:9px" title="Uncovered: 195"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">195</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">300</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs text-foreground">Pallet 1200×800</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:17px" title="On hand: 340"></div><div class="h-[10px] bg-chart-3b" style="width:19px" title="On order: 400"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:7px" title="Uncovered: 140"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">140</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">880</span></div><div class="flex h-[22px] items-center gap-2"><span class="w-[154px] truncate text-xs font-medium text-muted">46 more Items</span><div class="flex shrink-0 items-center gap-0.5" style="width:150px;height:10px"><div class="h-[10px] bg-chart-3a" style="width:90px" title="On hand: 1 840"></div><div class="h-[10px] bg-chart-3b" style="width:32px" title="On order: 660"></div><div class="h-[10px] bg-chart-3c rounded-r-[3px]" style="width:23px" title="Uncovered: 480"></div></div><span class="w-[70px] text-right text-xs font-semibold tabular-nums text-foreground">480</span><span class="w-[56px] text-right text-xs tabular-nums text-muted">2 980</span></div></div></article><article class="flex h-[355px] min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><div class="flex w-full items-center justify-between gap-3"><h2 class="text-sm font-semibold text-foreground">Reason Concentration</h2><p class="text-xs text-muted">Rejected quantity by Reason</p></div><div class="flex flex-col"><div class="flex h-[18px] items-center gap-1.5 text-xs font-medium text-muted"><span class="w-[126px]">Reason</span><span class="w-[130px]">Refused</span><span class="w-[64px] text-right">Undecided</span><span class="w-[80px] text-right">By customer</span><span class="w-[32px] text-right">Cum.</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Damaged in transit</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:83px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">1 420</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">380</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">210</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">29%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Wrong item supplied</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:57px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">980</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">240</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">90</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">49%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Packaging breach</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:36px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">610</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">150</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">0</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">62%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Short shipped</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:28px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">480</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">95</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">30</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">72%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Expired or near-date</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:23px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">390</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">60</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">140</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">80%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Contaminated</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:18px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">300</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">45</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">20</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">86%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Mislabelled</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:15px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">250</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">70</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">110</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">91%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Quantity mismarked</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:11px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">180</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">20</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">0</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">95%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Seal broken</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:8px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">140</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">15</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">45</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">98%</span></div><div class="flex h-[26px] items-center gap-1.5"><span class="w-[126px] truncate text-xs text-foreground">Other defect</span><span class="flex w-[130px] items-center gap-1.5"><span class="flex h-2.5 w-[88px] items-center"><span class="h-2.5 rounded-r-[3px] bg-chart-3b" style="width:6px"></span></span><span class="w-[36px] text-xs font-semibold tabular-nums text-foreground">110</span></span><span class="w-[64px] text-right text-xs tabular-nums text-muted">0</span><span class="w-[80px] text-right text-xs tabular-nums text-muted">25</span><span class="w-[32px] text-right text-xs tabular-nums text-muted">100%</span></div></div></article></div><div class="flex h-[268px] w-full gap-4"><article class="flex h-[268px] min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><div class="flex w-full items-center justify-between gap-3"><h2 class="text-sm font-semibold text-foreground">Arrival Timing</h2><p class="text-xs text-muted">Quantity owed vs expected at the dock, by week</p></div><div class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1"><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3b"></span><span class="text-xs text-muted">Owed</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-supply"></span><span class="text-xs text-muted">Expected at dock</span></span></div><div class="relative w-full" style="height:140px"><span class="absolute h-px bg-chart-grid" style="left:42px;width:414px;top:0px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:38px;top:-8px">2 500</span><span class="absolute h-px bg-chart-grid" style="left:42px;width:414px;top:58px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:38px;top:50px">1 250</span><span class="absolute h-px bg-chart-grid" style="left:42px;width:414px;top:116px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:38px;top:108px">0</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:52px;top:58px;width:17px;height:58px" title="Overdue owed 1 240"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:71px;top:108px;width:17px;height:8px" title="Overdue expected 180"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:42px;width:56px;top:124px">Overdue</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:102px;top:21px;width:17px;height:95px" title="W39 owed 2 050"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:121px;top:74px;width:17px;height:42px" title="W39 expected 900"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:98px;width:45px;top:124px">W39</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:147px;top:33px;width:17px;height:83px" title="W40 owed 1 780"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:166px;top:49px;width:17px;height:67px" title="W40 expected 1 450"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:143px;width:45px;top:124px">W40</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:192px;top:50px;width:17px;height:66px" title="W41 owed 1 420"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:211px;top:87px;width:17px;height:29px" title="W41 expected 620"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:188px;width:45px;top:124px">W41</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:237px;top:70px;width:17px;height:46px" title="W42 owed 990"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:256px;top:65px;width:17px;height:51px" title="W42 expected 1 100"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:232px;width:45px;top:124px">W42</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:281px;top:81px;width:17px;height:35px" title="W43 owed 760"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:300px;top:100px;width:17px;height:16px" title="W43 expected 340"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:277px;width:45px;top:124px">W43</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:326px;top:91px;width:17px;height:25px" title="W44 owed 540"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:322px;width:45px;top:124px">W44</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:371px;top:102px;width:17px;height:14px" title="W45 owed 310"></span><span class="absolute rounded-t-[3px] bg-chart-supply" style="left:390px;top:94px;width:17px;height:22px" title="W45 expected 480"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:366px;width:45px;top:124px">W45</span><span class="absolute rounded-t-[3px] bg-chart-3b" style="left:416px;top:108px;width:17px;height:8px" title="W46 owed 180"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:411px;width:45px;top:124px">W46</span></div><p class="text-xs leading-normal text-muted">Beyond W46: 3 120 owed, 47 orders, in no week · Not placed in a week: 6 undated drafts (1 900), 4 still in Draft (860), 2 since Closed or Discarded (540)</p></article><article class="flex h-[268px] min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><div class="flex w-full items-center justify-between gap-3"><h2 class="text-sm font-semibold text-foreground">Purchasing Pipeline</h2><p class="text-xs text-muted">Open drafts by state and age</p></div><div class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1"><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4a"></span><span class="text-xs text-muted">≤ 7 days</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4b"></span><span class="text-xs text-muted">8–14 days</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4c"></span><span class="text-xs text-muted">15–30 days</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4d"></span><span class="text-xs text-muted">&gt; 30 days</span></span></div><div class="flex flex-1 flex-col justify-center gap-[22px]"><div class="flex w-full flex-col gap-1.5"><div class="flex w-full items-center justify-between"><span class="text-xs font-semibold text-foreground">Draft</span><span class="text-xs tabular-nums text-muted">40 drafts</span></div><div class="flex items-center gap-0.5"><span class="flex h-6 items-center justify-center bg-chart-4a text-xs font-semibold text-accent-foreground" style="width:126px" title="≤ 7 days">14</span><span class="flex h-6 items-center justify-center bg-chart-4b text-xs font-semibold text-accent-foreground" style="width:81px" title="8–14 days">9</span><span class="flex h-6 items-center justify-center bg-chart-4c text-xs font-semibold text-foreground" style="width:54px" title="15–30 days">6</span><span class="flex h-6 items-center justify-center bg-chart-4d rounded-r-[3px] text-xs font-semibold text-foreground" style="width:99px" title="&gt; 30 days">11</span></div></div><div class="flex w-full flex-col gap-1.5"><div class="flex w-full items-center justify-between"><span class="text-xs font-semibold text-foreground">Ready for ordering</span><span class="text-xs tabular-nums text-muted">41 drafts</span></div><div class="flex items-center gap-0.5"><span class="flex h-6 items-center justify-center bg-chart-4a text-xs font-semibold text-accent-foreground" style="width:189px" title="≤ 7 days">21</span><span class="flex h-6 items-center justify-center bg-chart-4b text-xs font-semibold text-accent-foreground" style="width:108px" title="8–14 days">12</span><span class="flex h-6 items-center justify-center bg-chart-4c text-xs font-semibold text-foreground" style="width:45px" title="15–30 days">5</span><span class="flex h-6 items-center justify-center bg-chart-4d rounded-r-[3px] text-xs font-semibold text-foreground" style="width:27px" title="&gt; 30 days">3</span></div></div></div><p class="text-xs leading-normal text-muted">Counts drafts, not quantities · Closed and Discarded drafts are not counted</p></article></div></div></div><footer class="h-[33px] w-full shrink-0 border-t border-border bg-surface"></footer></div>
+    </main>
+  </body>
+</html>

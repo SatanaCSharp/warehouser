@@ -1,0 +1,1722 @@
+openapi: 3.1.0
+
+info:
+  title: Dashboards API
+  version: 0.1.0
+  description: |
+    Every record these eight reads present already exists and is already owned. `ordering`,
+    `delivery-addresses` and `arrival-inspection` hold the Customer Orders, the Items, the Purchase
+    Drafts and their lines, the Rejections and the Allocations. What none of them holds is a read
+    **across** them: a member who wants to know what is promised and uncovered opens three lists and
+    does the arithmetic by hand, and a Workspace Owner who wants to know which of their Warehouses is
+    under pressure cannot ask at all.
+
+    This API adds those reads and **stores nothing**. There is no command, no handler, no event and
+    no write path anywhere in it (`sad.md` §3, §5; `spec.md` §6 "Read-only guarantee"). Every figure
+    below is derived inside PostgreSQL at the moment it is asked for, and is cached, materialized and
+    written back nowhere (`CONTEXT.md` § Invariants).
+
+    Six shapes are load-bearing and readable from the paths below.
+
+    - **One endpoint per Panel, and a Panel is present only when the actor holds every Permission its
+      figures are drawn from.** That conjunction is the whole authorization model
+      ([ADR 0001](../adr/0001-conjunction-gated-panel-reads.md)): `WarehouseAccessGuard` admits on
+      the one **required** Permission, and the query asserts the remainder over the **observed** set
+      before issuing any read. A Panel the actor may not read is absent because the client never asks
+      for it — which is what makes AC-13's "no frame, no title and no count" a property of the
+      layout rather than of a response (`sad.md` §4.5, §6.1).
+    - **Every exclusion is a field of the same response, never a second read and never a client
+      subtraction.** `spec.md` §6 sets exclusion accounting at 100%, and the only shape that holds it
+      is a column beside the figure: the demand owed beyond the eighth week with the Customer Orders
+      it covers, the undated Ready drafts, the dated drafts still in Draft, the drafts since Closed
+      or Discarded, the lines that admit into neither rate, and the archived Warehouses not shown.
+    - **No figure of what is still owed counts a cancelled Customer Order's retained quantity.**
+      `state = 'unfulfilled'` is a predicate of the read (AC-04). `OrderFlowWeek` is the single
+      exception, and it carries that quantity only inside the week the order was recorded, as
+      `cancelledQuantity` — withdrawn from the week's whole rather than demand the Workspace still
+      carries.
+    - **Independent aggregations are joined on a key, never fanned out.** AC-06a forbids any quantity
+      being multiplied by the row count beside it, which is exactly what a naive join across two
+      one-to-many relationships produces. Each figure below is computed in its own context and only
+      then set beside the others (`data-model.md` § The read model).
+    - **Nothing is paged, and every row-keyed Panel is bounded by the server.** A Panel keyed by Item
+      or by Rejection Reason returns at most ten named rows plus one Remainder Row; a Panel keyed by
+      Warehouse returns every active Warehouse the surface shows, a population `spec.md` §1 bounds at
+      20. Cursor pagination would be a control on a surface `spec.md` §3 gives no controls at all —
+      see `api-sync-report.md` § "Recorded deviations".
+    - **The Workspace is resolved from the session and is never named by a request.** No Workspace
+      path carries an identifier, which is AC-22 and the cross-Workspace abuse case by construction
+      (`sad.md` §6.5a, §6.6). The Warehouse paths carry one, and it is the only thing authority is
+      resolved from (`workspaces` ADR 0001).
+
+    **Nothing here is asynchronous.** `sad.md` §3 states the feature adds no queue, scheduler,
+    webhook or third-party callback and that BullMQ remains uninstalled; §6's closing note says no
+    diagram carries an idempotency key, a retry note or a dead-letter branch and none should be read
+    as missing one. So **no operation carries an `Idempotency-Key`** — every one of them is a `GET` —
+    and **no `events.md` is written**, both correctly absent rather than missing.
+
+    **The one stored-data change this feature makes appears in no path here.** It is the
+    `WAREHOUSE_PERFORMANCE:WATCH` row added to the Workspace Permission catalogue and granted to every
+    existing Workspace Owner Role by the release migration (AC-21a). A Workspace Owner afterwards
+    delegates it through the shipped Workspace Role Editor, which gains one row and no code
+    (`sad.md` §6.7) — so AC-21 is served by `workspaces`' existing operations and adds nothing here.
+
+    **Scope of this document.** The eight operations this feature adds, and nothing else. Every
+    `ordering`, `delivery-addresses` and `arrival-inspection` operation is unchanged and stays
+    governed by its own contract.
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+# Every operation requires a resolved session. Both surfaces are classified confidential
+# (`spec.md` §6.1) and neither has a public endpoint, so no operation overrides with `security: []`.
+security:
+  - SessionCookie: []
+
+tags:
+  - name: dashboards
+    description: |
+      The two derived read surfaces — four Warehouse Panels authorized by the watch Permissions that
+      already govern the records they read, and four Workspace Panels authorized by the one Workspace
+      Permission this feature adds.
+
+      There is one `dashboards` module on each side of the stack, and it owns no entity: `sad.md` §5
+      places eight queries, four shared read repositories and two controllers in it, and no
+      `domain/entities/`, no `domain/services/` and no `handlers/` at all.
+
+paths:
+  ##########################################################################################
+  # Warehouse surface — api/v1/warehouses/{warehouseId}/dashboard/*
+  #
+  # Authority is the membership held in the Warehouse the path names (AC-24, `workspaces` ADR 0001).
+  # Every handler declares `@ArchivedTolerantRead()`, so an archived Warehouse serves its figures on
+  # exactly the Permission terms that applied before archiving and `access.warehouse_archived` is
+  # unreachable on all four (AC-23).
+  ##########################################################################################
+
+  /api/v1/warehouses/{warehouseId}/dashboard/coverage-gap:
+    parameters:
+      - $ref: '#/components/parameters/WarehouseIdPath'
+
+    get:
+      tags: [dashboards]
+      summary: Read the Coverage Gap
+      operationId: readWarehouseCoverageGap
+      description: |
+        For each Item some Unfulfilled Customer Order still asks for, how its total Outstanding
+        Quantity stands against what the Warehouse already holds and what it has on order
+        (`CONTEXT.md` "Coverage Gap").
+
+        **At most ten rows plus one Remainder Row** (AC-03). The order is Uncovered Quantity
+        descending, then total Outstanding Quantity descending, then SKU ascending — a total order,
+        so two members reading the same Warehouse at the same moment see the same ten Items in the
+        same order. The two numeric columns the design prints are deliberately those two sort keys.
+
+        **`uncoveredQuantity` is floored at nothing** (AC-05): an Item covered beyond its demand
+        reports `0` rather than a negative quantity or a surplus, and sorts below every Item that has
+        something uncovered.
+
+        **`inboundQuantity` is the ordered quantity of the open Purchase Draft Lines naming the
+        Item** — both Delivery Modes, because goods sent Direct to Customer answer that customer's
+        demand exactly as goods reaching the dock do (AC-08). It is never derived from the stated
+        quantity of a link between a line and a Customer Order, which claims an intention rather than
+        a quantity on order (AC-06). Only drafts in Draft or Ready for Ordering contribute; a Closed
+        or Discarded draft counts toward nothing here (AC-11).
+
+        **A deactivated Item is shown exactly as an active one** (AC-25): `items.deactivated_at` is
+        read by nothing in this statement and filters nothing, because deactivation withdraws an Item
+        from being newly ordered and withdraws nothing from what has already been promised.
+
+        **The three quantities do not necessarily sum to `totalOutstandingQuantity`.** They are the
+        raw figures the model holds — `on_hand_quantity` read directly and the ordered quantity
+        summed — so an over-covered Item reports `onHandQuantity + inboundQuantity` greater than its
+        outstanding. Scaling the bar is the client's; clamping here would report a figure no record
+        holds. See `api-sync-report.md` § Note 1.
+
+        Archived-tolerant (AC-23). Requires `ITEMS:WATCH`; observes `CUSTOMER_ORDERS:WATCH` and
+        `PURCHASE_DRAFTS:WATCH`, both of which the query asserts before issuing any read (ADR 0001).
+      responses:
+        '200':
+          description: The Warehouse's Coverage Gap.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoverageGapPanel' }
+              example:
+                rows:
+                  - itemId: '00000000-0000-4000-8000-000000000101'
+                    sku: 'TEST-SKU-0001'
+                    totalOutstandingQuantity: 880
+                    onHandQuantity: 340
+                    inboundQuantity: 400
+                    uncoveredQuantity: 140
+                  - itemId: '00000000-0000-4000-8000-000000000102'
+                    sku: 'TEST-SKU-0002'
+                    totalOutstandingQuantity: 120
+                    onHandQuantity: 120
+                    inboundQuantity: 0
+                    uncoveredQuantity: 0
+                remainder:
+                  itemCount: 46
+                  totalOutstandingQuantity: 2980
+                  onHandQuantity: 1840
+                  inboundQuantity: 660
+                  uncoveredQuantity: 480
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WarehousePanelDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/warehouses/{warehouseId}/dashboard/arrival-timing:
+    parameters:
+      - $ref: '#/components/parameters/WarehouseIdPath'
+
+    get:
+      tags: [dashboards]
+      summary: Read Arrival Timing
+      operationId: readWarehouseArrivalTiming
+      description: |
+        What the Warehouse owes each week set beside what it expects to reach its dock each week,
+        over **one Overdue bucket and the eight weeks following** — nine buckets, always, in order.
+
+        **The two series are never netted against one another** (`CONTEXT.md` "Arrival Timing"). One
+        is demand read from Unfulfilled Customer Orders bucketed by `needed_by`; the other is goods
+        on order, read from the Purchase Drafts standing in Ready for Ordering **at the moment of the
+        read** and bucketed by `expected_arrival_date`, counting **Via Warehouse lines only** because
+        a Direct to Customer line never arrives at the dock (AC-08). No record links a week's arrivals
+        to that week's demand, and this response claims none.
+
+        **`expectedQuantity` on the Overdue bucket carries the Ready drafts whose Expected Arrival
+        Date has already passed.** `spec.md` AC-07 names no bucket for one and `CONTEXT.md` says
+        Overdue means nothing for a draft; `sad.md` §6.4 rules it into the first bucket beside the
+        Overdue demand and carries that as an open question in §11. See `api-sync-report.md`
+        § Finding 2.
+
+        **Four exclusions, every one a field of this same response** (AC-07, AC-08a,
+        `spec.md` §6 "Exclusion accounting"), so neither series is ever read as the whole of what is
+        owed or on order, and the difference from the Coverage Gap's `inboundQuantity` beside it is
+        accounted for rather than left unexplained.
+
+        Archived-tolerant (AC-23). Requires `CUSTOMER_ORDERS:WATCH`; observes `PURCHASE_DRAFTS:WATCH`,
+        which the query asserts before issuing any read (ADR 0001).
+      responses:
+        '200':
+          description: The Warehouse's owed and expected quantities over nine buckets.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArrivalTimingPanel' }
+              example:
+                timezone: 'UTC'
+                buckets:
+                  - kind: 'overdue'
+                    weekStart: null
+                    owedQuantity: 1240
+                    expectedQuantity: 180
+                  - kind: 'week'
+                    weekStart: '2026-09-21'
+                    owedQuantity: 860
+                    expectedQuantity: 1100
+                  - kind: 'week'
+                    weekStart: '2026-09-28'
+                    owedQuantity: 1420
+                    expectedQuantity: 640
+                  - kind: 'week'
+                    weekStart: '2026-10-05'
+                    owedQuantity: 500
+                    expectedQuantity: 0
+                  - kind: 'week'
+                    weekStart: '2026-10-12'
+                    owedQuantity: 320
+                    expectedQuantity: 900
+                  - kind: 'week'
+                    weekStart: '2026-10-19'
+                    owedQuantity: 260
+                    expectedQuantity: 0
+                  - kind: 'week'
+                    weekStart: '2026-10-26'
+                    owedQuantity: 140
+                    expectedQuantity: 420
+                  - kind: 'week'
+                    weekStart: '2026-11-02'
+                    owedQuantity: 0
+                    expectedQuantity: 0
+                  - kind: 'week'
+                    weekStart: '2026-11-09'
+                    owedQuantity: 80
+                    expectedQuantity: 0
+                exclusions:
+                  beyondHorizon:
+                    owedQuantity: 3400
+                    customerOrderCount: 17
+                  undatedReadyDrafts:
+                    draftCount: 6
+                    orderedQuantity: 2200
+                  datedDraftsStillInDraft:
+                    draftCount: 4
+                    orderedQuantity: 1500
+                  draftsSinceClosedOrDiscarded:
+                    draftCount: 9
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WarehousePanelDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/warehouses/{warehouseId}/dashboard/purchasing-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/WarehouseIdPath'
+
+    get:
+      tags: [dashboards]
+      summary: Read the Purchasing Pipeline
+      operationId: readWarehousePurchasingPipeline
+      description: |
+        How many of the Warehouse's **open** Purchase Drafts stand in each state, divided by how long
+        they have stood there. **Counts drafts, never quantities** (`CONTEXT.md` "Purchasing
+        Pipeline"): what it reports is unfinished work rather than goods.
+
+        **Two states only — `draft` and `ready_for_ordering`** (AC-11). A Closed or Discarded draft is
+        history to this Panel; `purchasing-spread` on the Workspace surface is the one Panel anywhere
+        that counts them.
+
+        **Draft Age is measured from the moment the draft entered the state it stands in** (AC-10):
+        `created_at` for a Draft, `readied_at` for a Ready for Ordering draft — so a draft readied
+        yesterday after a month in Draft reads as a day old. The four Age Bands are a case over that
+        derived age, computed in the statement rather than in the application.
+
+        Each state row carries **all four bands**, a band with no draft reporting `0`. A zero here
+        discloses nothing the row's own presence does not: the actor holding `PURCHASE_DRAFTS:WATCH`
+        may already read every draft it counts.
+
+        Archived-tolerant (AC-23). Requires `PURCHASE_DRAFTS:WATCH` and observes nothing — this Panel
+        is not a conjunction, so it declares no observed Permission and its query asserts none.
+      responses:
+        '200':
+          description: Open Purchase Draft counts by state and Age Band.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PurchasingPipelinePanel' }
+              example:
+                states:
+                  - state: 'draft'
+                    bands:
+                      - ageBand: 'up_to_7_days'
+                        draftCount: 18
+                      - ageBand: 'from_8_to_14_days'
+                        draftCount: 9
+                      - ageBand: 'from_15_to_30_days'
+                        draftCount: 4
+                      - ageBand: 'over_30_days'
+                        draftCount: 2
+                  - state: 'ready_for_ordering'
+                    bands:
+                      - ageBand: 'up_to_7_days'
+                        draftCount: 21
+                      - ageBand: 'from_8_to_14_days'
+                        draftCount: 11
+                      - ageBand: 'from_15_to_30_days'
+                        draftCount: 6
+                      - ageBand: 'over_30_days'
+                        draftCount: 0
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WarehouseDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/warehouses/{warehouseId}/dashboard/reason-concentration:
+    parameters:
+      - $ref: '#/components/parameters/WarehouseIdPath'
+
+    get:
+      tags: [dashboards]
+      summary: Read Reason Concentration
+      operationId: readWarehouseReasonConcentration
+      description: |
+        How much of the Warehouse's total refused quantity the largest Rejection Reasons account for,
+        each Reason's share and the running total down that order (AC-12, `CONTEXT.md` "Reason
+        Concentration").
+
+        **Not a Pareto chart.** The design records that a quantity bar against a cumulative-% line is
+        a dual-axis plot inventing a correlation the data does not contain; the running share is a
+        numeric column instead (`design-handoff.md` § Panel specifications).
+
+        **Both Rejection Sources are counted**, because a Warehouse's Rejections are its own wherever
+        the goods were refused. This is the one Warehouse figure the Direct to Customer exclusion does
+        **not** govern: Reason Concentration is not a figure about the dock (`CONTEXT.md`
+        § Invariants). Every Disposition is counted, and no period bounds the read.
+
+        **`undecidedQuantity` and `customerReportedQuantity` are independent columns of the row, not
+        segments of its bar** (AC-12). A Rejection can be both undecided and customer-reported, so
+        stacking them inside one bar would double-count it. Each may equal `refusedQuantity` and they
+        may overlap; neither is a part of a partition.
+
+        **At most ten Reasons plus one Remainder Row**, ordered by refused quantity descending. No
+        Remainder Row is emitted while nothing has been gathered into one — `remainder` is `null`,
+        not a row of zeros (AC-12).
+
+        Archived-tolerant (AC-23). Requires `REJECTIONS:WATCH` and observes nothing — this Panel is
+        not a conjunction.
+      responses:
+        '200':
+          description: The Warehouse's refused quantity by Rejection Reason.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReasonConcentrationPanel' }
+              example:
+                totalRefusedQuantity: 2910
+                rows:
+                  - rejectionReasonId: 'damaged_in_transit'
+                    label: 'Damaged in transit'
+                    refusedQuantity: 1620
+                    sharePercent: 55.7
+                    cumulativeSharePercent: 55.7
+                    undecidedQuantity: 540
+                    customerReportedQuantity: 210
+                  - rejectionReasonId: 'wrong_item_supplied'
+                    label: 'Wrong item supplied'
+                    refusedQuantity: 980
+                    sharePercent: 33.7
+                    cumulativeSharePercent: 89.4
+                    undecidedQuantity: 120
+                    customerReportedQuantity: 0
+                remainder:
+                  reasonCount: 3
+                  refusedQuantity: 310
+                  undecidedQuantity: 40
+                  customerReportedQuantity: 25
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WarehouseDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  ##########################################################################################
+  # Workspace surface — api/v1/workspace/dashboard/*
+  #
+  # No path names a Workspace. `WorkspaceAccessGuard` resolves it from the session, which is AC-22
+  # and the cross-Workspace abuse case by construction (`sad.md` §6.5a, §6.6).
+  #
+  # All four require the one Permission this feature adds, `WAREHOUSE_PERFORMANCE:WATCH`, and all four
+  # scope themselves to the Workspace's **active** Warehouses, reporting the archived count as a
+  # field of their own (`spec.md` §8 default).
+  ##########################################################################################
+
+  /api/v1/workspace/dashboard/demand-pressure:
+    get:
+      tags: [dashboards]
+      summary: Read Demand Pressure
+      operationId: readWorkspaceDemandPressure
+      description: |
+        Each active Warehouse's total Outstanding Quantity divided into the three Urgency Bands
+        (AC-14). It says how much is promised and how soon, and says nothing about whether it can be
+        supplied (`CONTEXT.md` "Demand Pressure").
+
+        **Absolute quantities, not shares.** The design scales the bars on a scale of quantities so a
+        small Warehouse in trouble is not flattened beside a large healthy one; this response carries
+        the quantities and the client does the scaling.
+
+        **The three bands partition the Warehouse's outstanding demand**, so each quantity appears in
+        exactly one and the three sum to `totalOutstandingQuantity`: `overdue`, whose needed-by date
+        has passed; `due_soon`, needed within the next fourteen days; `later`, after those fourteen
+        days (`CONTEXT.md` "Urgency Band"). The fourteen days are a span this feature's owners fixed —
+        no artifact in the product records a lead time one could be derived from.
+
+        **Cancelled Customer Orders contribute nothing** (AC-04): `state = 'unfulfilled'` is a
+        predicate of the read, so the quantity a cancellation left outstanding reaches no band.
+
+        Every Warehouse is returned; this Panel is keyed by Warehouse, a population `spec.md` §1
+        bounds at 20, and carries no Remainder Row.
+      responses:
+        '200':
+          description: Outstanding quantity per active Warehouse, by Urgency Band.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DemandPressurePanel' }
+              example:
+                archivedWarehouseCount: 2
+                warehouses:
+                  - warehouseId: '00000000-0000-4000-8000-000000000201'
+                    warehouseName: 'Test Warehouse North'
+                    overdueQuantity: 1240
+                    dueSoonQuantity: 2180
+                    laterQuantity: 3400
+                    totalOutstandingQuantity: 6820
+                  - warehouseId: '00000000-0000-4000-8000-000000000202'
+                    warehouseName: 'Test Warehouse South'
+                    overdueQuantity: 160
+                    dueSoonQuantity: 420
+                    laterQuantity: 980
+                    totalOutstandingQuantity: 1560
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WorkspaceDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/workspace/dashboard/order-flow:
+    get:
+      tags: [dashboards]
+      summary: Read Order Flow
+      operationId: readWorkspaceOrderFlow
+      description: |
+        Twelve weeks for the **Workspace as a whole**, pooling its Warehouses and naming none of them
+        (AC-16) — the one Panel on either surface that reports the Workspace's own trend rather than
+        setting its Warehouses beside one another. Weeks run oldest first and the last is the week in
+        progress.
+
+        **Each week's whole is `recordedQuantity`**: the quantity the Customer Orders first recorded
+        in that week ask for **now**, those since cancelled included. Within it, `assignedQuantity`
+        is how much has since been assigned to arrived goods and `cancelledQuantity` how much has
+        since been withdrawn; `stillAwaitedQuantity` is the remainder, carried as a field so the
+        client subtracts nothing.
+
+        **The week is the Customer Order's recording week, never the allocation's** (AC-17). A
+        Customer Order satisfied by goods arriving on three separate occasions in three later weeks
+        has its three assignments added together and reported against the week it was recorded;
+        nothing is placed in the three weeks the goods arrived. The figure is **quantity assigned**,
+        not orders fulfilled: no record states when a Customer Order became Fulfilled, and this
+        response claims nowhere that one did (`CONTEXT.md` "Assigned Quantity").
+
+        **`recordedQuantity` is read as it stands, not as it stood** (AC-17a). Nothing in the product
+        keeps what a Customer Order asked for at any earlier moment, so a past week legitimately moves
+        when a member amends an order — which is why the Panel states it.
+
+        **`cancelledQuantity` is the cancelled orders' retained outstanding quantity**, the only
+        reading the schema supports: `chk_customer_orders_state_outstanding` keeps the quantity a
+        cancellation left uncovered, and no column records what was assigned before it. Reporting the
+        whole `quantity` as withdrawn would double-count the part already allocated
+        (`data-model.md` § The read model).
+
+        This is the **one exception** to AC-04's rule that no figure of what is owed counts a
+        cancelled order: here the subject is what the week took on, and the cancelled part is
+        presented as withdrawn from that whole rather than as demand the Workspace still carries.
+      responses:
+        '200':
+          description: Twelve weeks of recorded demand for the Workspace, pooled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderFlowPanel' }
+              example:
+                timezone: 'UTC'
+                archivedWarehouseCount: 2
+                weeks:
+                  - weekStart: '2026-07-06'
+                    recordedQuantity: 4200
+                    assignedQuantity: 3800
+                    cancelledQuantity: 180
+                    stillAwaitedQuantity: 220
+                  - weekStart: '2026-07-13'
+                    recordedQuantity: 3950
+                    assignedQuantity: 3400
+                    cancelledQuantity: 220
+                    stillAwaitedQuantity: 330
+                  - weekStart: '2026-07-20'
+                    recordedQuantity: 4410
+                    assignedQuantity: 3900
+                    cancelledQuantity: 150
+                    stillAwaitedQuantity: 360
+                  - weekStart: '2026-07-27'
+                    recordedQuantity: 3720
+                    assignedQuantity: 3150
+                    cancelledQuantity: 240
+                    stillAwaitedQuantity: 330
+                  - weekStart: '2026-08-03'
+                    recordedQuantity: 4080
+                    assignedQuantity: 3400
+                    cancelledQuantity: 200
+                    stillAwaitedQuantity: 480
+                  - weekStart: '2026-08-10'
+                    recordedQuantity: 4600
+                    assignedQuantity: 3720
+                    cancelledQuantity: 310
+                    stillAwaitedQuantity: 570
+                  - weekStart: '2026-08-17'
+                    recordedQuantity: 3890
+                    assignedQuantity: 2980
+                    cancelledQuantity: 190
+                    stillAwaitedQuantity: 720
+                  - weekStart: '2026-08-24'
+                    recordedQuantity: 4150
+                    assignedQuantity: 2940
+                    cancelledQuantity: 260
+                    stillAwaitedQuantity: 950
+                  - weekStart: '2026-08-31'
+                    recordedQuantity: 4470
+                    assignedQuantity: 2610
+                    cancelledQuantity: 180
+                    stillAwaitedQuantity: 1680
+                  - weekStart: '2026-09-07'
+                    recordedQuantity: 3980
+                    assignedQuantity: 1840
+                    cancelledQuantity: 220
+                    stillAwaitedQuantity: 1920
+                  - weekStart: '2026-09-14'
+                    recordedQuantity: 4230
+                    assignedQuantity: 1120
+                    cancelledQuantity: 140
+                    stillAwaitedQuantity: 2970
+                  - weekStart: '2026-09-21'
+                    recordedQuantity: 1820
+                    assignedQuantity: 240
+                    cancelledQuantity: 0
+                    stillAwaitedQuantity: 1580
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WorkspaceDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/workspace/dashboard/purchasing-spread:
+    get:
+      tags: [dashboards]
+      summary: Read Purchasing Spread
+      operationId: readWorkspacePurchasingSpread
+      description: |
+        Every active Warehouse counted against **every** Purchase Draft state — Draft and Ready for
+        Ordering together with Closed and Discarded (AC-18) — so a Warehouse that discards most of
+        what it starts is distinguishable from one that cannot get goods.
+
+        **This is the one Panel on either surface that counts a draft the open-state rule excludes
+        everywhere else** (`CONTEXT.md` § Invariants). It counts drafts, never quantities, and no
+        period bounds the read.
+
+        It is **not** a judgement of a Warehouse: a Discarded draft records a decision a member made,
+        and the Panel says where purchasing work ends up rather than whether ending it there was
+        right (`CONTEXT.md` "Purchasing Spread").
+
+        Each Warehouse carries **all four states**, a pairing with no draft reporting `0` — the
+        design prints the count in every cell so the fill is a scanning aid and never the only
+        encoding.
+      responses:
+        '200':
+          description: Purchase Draft counts per active Warehouse and state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PurchasingSpreadPanel' }
+              example:
+                archivedWarehouseCount: 2
+                warehouses:
+                  - warehouseId: '00000000-0000-4000-8000-000000000201'
+                    warehouseName: 'Test Warehouse North'
+                    counts:
+                      - state: 'draft'
+                        draftCount: 33
+                      - state: 'ready_for_ordering'
+                        draftCount: 38
+                      - state: 'closed'
+                        draftCount: 124
+                      - state: 'discarded'
+                        draftCount: 11
+                  - warehouseId: '00000000-0000-4000-8000-000000000202'
+                    warehouseName: 'Test Warehouse South'
+                    counts:
+                      - state: 'draft'
+                        draftCount: 4
+                      - state: 'ready_for_ordering'
+                        draftCount: 7
+                      - state: 'closed'
+                        draftCount: 19
+                      - state: 'discarded'
+                        draftCount: 0
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WorkspaceDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /api/v1/workspace/dashboard/receipt-reliability:
+    get:
+      tags: [dashboards]
+      summary: Read Receipt Reliability
+      operationId: readWorkspaceReceiptReliability
+      description: |
+        Each active Warehouse's On-time Arrival Rate and Conformance Rate set beside each other
+        against the quantity it received (AC-19). **Two independent shares, never combined into one
+        number**, and all three read over the Warehouse's **whole retained record** rather than a
+        recent period — no Panel on either Dashboard is period-bounded.
+
+        **The two rates have different denominators and different Delivery Mode rules**, and this is
+        easy to get wrong in both directions (`data-model.md` § The read model):
+
+        - **On-time Arrival Rate** — **Via Warehouse lines only** (AC-20b), among those on which
+          something was received and whose draft carries an Expected Arrival Date. The verdict is
+          `ending_recorded_at` against that date. A line on an undated draft, a line with no ending at
+          all, a line whose ending recorded that nothing was received, and every Direct to Customer
+          line enter **neither** part of the rate — none of them is a failure, and counting one as
+          such would report a dock problem no record states.
+        - **Conformance Rate** — **not** restricted by Delivery Mode; neither the glossary nor AC-20
+          restricts it, so a Direct to Customer line carrying `met` or `not_met` counts in it. A line
+          with no recorded verdict is unknown rather than failed, and a `not_applicable` line was
+          given no instruction to honour; both enter neither part (AC-20).
+
+        **A Warehouse that admits no line into a rate reports `null`, never `0`** (AC-20a), so a
+        Warehouse with no record is never read as the worst or the best performer. The two rates are
+        independently nullable because their denominators are independent; a Warehouse `null` on both
+        is the AC-20a case, and the design leaves it unplotted and names it in the footnote.
+
+        **Every exclusion is stated per Warehouse** (AC-20), covering how much of that Warehouse's
+        record each one accounts for — the exclusion accounting `spec.md` §6 sets at 100%.
+
+        The Conformance Rate carries every ending recorded before `arrival-inspection` shipped, none
+        of which was backfilled, which is what `spec.md` §7's conformance-coverage figure exists to
+        expose (`CONTEXT.md` "Receipt Reliability").
+      responses:
+        '200':
+          description: Both rates and the received quantity per active Warehouse.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReceiptReliabilityPanel' }
+              example:
+                archivedWarehouseCount: 2
+                warehouses:
+                  - warehouseId: '00000000-0000-4000-8000-000000000201'
+                    warehouseName: 'Test Warehouse North'
+                    onTimeArrivalRatePercent: 82.4
+                    conformanceRatePercent: 91.0
+                    receivedQuantity: 18400
+                    exclusions:
+                      undatedLineCount: 34
+                      noEndingRecordedLineCount: 52
+                      nothingReceivedLineCount: 7
+                      directToCustomerLineCount: 61
+                      unrecordedConformanceLineCount: 88
+                      notApplicableConformanceLineCount: 19
+                  - warehouseId: '00000000-0000-4000-8000-000000000203'
+                    warehouseName: 'Test Warehouse East'
+                    onTimeArrivalRatePercent: null
+                    conformanceRatePercent: null
+                    receivedQuantity: 0
+                    exclusions:
+                      undatedLineCount: 12
+                      noEndingRecordedLineCount: 5
+                      nothingReceivedLineCount: 0
+                      directToCustomerLineCount: 9
+                      unrecordedConformanceLineCount: 26
+                      notApplicableConformanceLineCount: 0
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/WorkspaceDenied' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: warehouser_session
+      description: |
+        Unchanged from `arrival-inspection`. The opaque session cookie issued by
+        `POST /api/v1/auth/sign-up` and `POST /api/v1/auth/sign-in`, resolved to the acting User by
+        `SessionAuthGuard`.
+
+        It is not a bearer token and carries no authority. Every authorization decision — the
+        required Permission and every observed Permission — is re-read from the store on the request
+        being authorized, never from the session, a cache or the actor's last request
+        (`spec.md` §6 "Authority staleness", target 0).
+
+  parameters:
+    WarehouseIdPath:
+      in: path
+      name: warehouseId
+      required: true
+      description: |
+        The Warehouse this read applies to, and the only thing `WarehouseAccessGuard` resolves
+        authority from (`workspaces` ADR 0001). A membership carrying every watch Permission in
+        another Warehouse of the same Workspace resolves nothing here, which is **AC-24** by
+        construction.
+
+        A value naming no Warehouse the actor is a member of is **not** distinguishable from one
+        naming a Warehouse whose Role lacks the required Permission, nor from one naming no Warehouse
+        at all: all three produce the same `access.denied` (AC-02, AC-24).
+      schema: { type: string, format: uuid }
+
+  ##########################################################################################
+  # Responses — one per error branch of the sad.md §6 sequences
+  #
+  # There is no 404 anywhere in this document, and its absence is the point: a missing target, a
+  # missing membership and an insufficient Permission are all reported identically so a denial never
+  # discloses which one occurred (`shared/access/access-denial.errors.ts`, AC-02, AC-15, AC-24).
+  #
+  # There is no `access.warehouse_archived` either: every Warehouse handler declares
+  # `@ArchivedTolerantRead()`, so an archived Warehouse takes the admitted path unchanged (AC-23).
+  ##########################################################################################
+
+  responses:
+    Unauthenticated:
+      description: |
+        Unchanged. No valid session resolves, and the request is refused before anything else is
+        (`sad.md` §6.2 first branch). `SessionAuthGuard` raises Nest's `UnauthorizedException`, which
+        the global filter maps to this envelope at 401 — existing behaviour, not a code this feature
+        adds.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: 'request.invalid'
+            message: 'The request is invalid.'
+
+    WarehouseDenied:
+      description: |
+        Unchanged. `WarehouseAccessGuard`'s single non-enumerating denial: the actor holds no
+        membership in the Warehouse the path names, or the Role of that membership does not carry the
+        Permission this read **requires**, or the Permission is held only through another Warehouse's
+        Role (AC-24), or the path names no Warehouse unambiguously.
+
+        It names no Item, Reason, draft, quantity or count, and presents nothing from which the
+        existence of one could be inferred — a Warehouse holding a great deal and a Warehouse holding
+        nothing produce the identical body (`spec.md` §6.1, abuse case "Cross-Warehouse reach").
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: 'access.denied'
+            message: 'Access is not permitted.'
+
+    WarehousePanelDenied:
+      description: |
+        The same envelope as `WarehouseDenied`, raised from either of **two** places on a conjunction
+        Panel ([ADR 0001](../adr/0001-conjunction-gated-panel-reads.md), `sad.md` §6.2):
+
+        1. `WarehouseAccessGuard`, on the **required** Permission — `ITEMS:WATCH` for the Coverage
+           Gap, `CUSTOMER_ORDERS:WATCH` for Arrival Timing.
+        2. The **query**, asserting the remaining **observed** Permissions over the granted subset the
+           guard froze onto `AccessCurrentUser` — **before any read is issued**, so a denial reaches
+           no row.
+
+        The two are deliberately indistinguishable on the wire: a member holding `ITEMS:WATCH` but
+        not `PURCHASE_DRAFTS:WATCH` learns only that the figures are not theirs to read, never which
+        Permission fell short (AC-02) and never that the Warehouse holds Purchase Drafts at all
+        (AC-13).
+
+        **An observed Permission can only narrow.** It is consulted after the required Permission has
+        already admitted the request, `canActivate` never reads it, and declaring one can never make
+        a denied request succeed. The risk this shape carries is the opposite one — a handler
+        declaring an observed Permission its query never asserts would disclose silently — which is
+        why `sad.md` §10 makes the both-sides test mandatory.
+
+        **In practice the client never provokes this.** The route loader dispatches only the Panels
+        whose whole Permission set the projection reports (`sad.md` §6.1), so this response is what a
+        direct request, a stale client or a revoked grant meets — not what the surface produces.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          examples:
+            requiredPermissionMissing:
+              summary: AC-02 — the required Permission is not held in this Warehouse
+              value:
+                code: 'access.denied'
+                message: 'Access is not permitted.'
+            conjunctionFailed:
+              summary: AC-13, ADR 0001 — an observed Permission the Panel needs is absent
+              value:
+                code: 'access.denied'
+                message: 'Access is not permitted.'
+
+    WorkspaceDenied:
+      description: |
+        Unchanged. `WorkspaceAccessGuard`'s non-enumerating denial: the actor's Workspace Role does
+        not carry `WAREHOUSE_PERFORMANCE:WATCH` (AC-15).
+
+        **A Warehouse Member holding every watch Permission in their own Warehouse and no Workspace
+        Role reaches this too** (AC-22), because the authority to observe the Workspace's Warehouses
+        is held in the Workspace and is never assembled from memberships in its Warehouses — the two
+        levels never meet (`workspaces` ADR 0001).
+
+        It names no Warehouse, quantity, count or share, and reveals nothing about how many
+        Warehouses the Workspace holds or whether any of them has anything outstanding (AC-15). The
+        Workspace itself is resolved from the session, so no identifier in the request can have
+        redirected the read at another Workspace (AC-22).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: 'workspace.denied'
+            message: 'Access is not permitted.'
+
+    InternalError:
+      description: |
+        Unchanged. Anything the global filter does not recognize, an `AssertionError` deliberately
+        among them: a broken invariant is a defect, and a defect discloses nothing beyond 500.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example:
+            code: 'system.internal_error'
+            message: 'Something went wrong. Please try again.'
+
+  schemas:
+    ##########################################################################################
+    # Envelope
+    ##########################################################################################
+
+    Error:
+      type: object
+      description: |
+        Unchanged. The unified envelope every refusal in this repository carries, produced by
+        `shared/errors/global-http-exception.filter.ts`.
+
+        **This feature adds no error code.** Every refusal on both surfaces is produced by a shipped
+        guard, by the global filter, or by the shared `accessDeniedError()` the conjunction assertion
+        reuses. Three of the four codes reachable here are `ErrorCode` entries —
+        `ACCESS_DENIED`, `WORKSPACE_DENIED` and `INTERNAL_ERROR` in
+        `packages/shared-types/src/enums/error-code.ts`. The fourth, `request.invalid`, is a literal
+        of `httpExceptionMapping` in the global filter rather than an enum entry, exactly as
+        `arrival-inspection` documents it.
+
+        `details` is never populated by any operation in this document: no read here takes a request
+        body, so there is no field to name, and an authorization denial carries no structured context
+        by design.
+      required: [code, message]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          pattern: "^[a-z_]+\\.[a-z_]+$"
+          examples:
+            [
+              'access.denied',
+              'workspace.denied',
+              'request.invalid',
+              'system.internal_error',
+            ]
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+    ##########################################################################################
+    # Vocabularies
+    ##########################################################################################
+
+    PurchaseDraftState:
+      type: string
+      enum: [draft, ready_for_ordering, closed, discarded]
+      description: |
+        Unchanged from `ordering` (`purchaseDraftStateSchema`). Only `purchasing-spread` presents all
+        four: `purchasing-pipeline` presents the two open states and `coverage-gap` and
+        `arrival-timing` count nothing from a Closed or Discarded draft (AC-11, AC-18).
+
+    OpenPurchaseDraftState:
+      type: string
+      enum: [draft, ready_for_ordering]
+      description: |
+        The two states the Purchasing Pipeline counts, and the same set `ordering`'s Coverage admits
+        (AC-11, `CONTEXT.md` § Invariants). A narrowing of `PurchaseDraftState`, stated separately so
+        the Panel's own bound is in the contract rather than in prose.
+
+    AgeBand:
+      type: string
+      enum: [up_to_7_days, from_8_to_14_days, from_15_to_30_days, over_30_days]
+      description: |
+        **New.** Which of four spans one Purchase Draft's Draft Age falls into: up to seven days,
+        eight to fourteen, fifteen to thirty, more than thirty (`CONTEXT.md` "Age Band").
+
+        The age is measured from the moment the draft entered the state it stands in — `created_at`
+        for a Draft, `readied_at` for a Ready for Ordering draft (AC-10) — and the band is a case over
+        that derived age, computed in the statement against `(now() AT TIME ZONE $tz)::date`.
+
+        **Not a deadline, an escalation or an expiry**; nothing happens to a draft because of the band
+        it is in.
+
+    UrgencyBand:
+      type: string
+      enum: [overdue, due_soon, later]
+      description: |
+        **New.** Which of three bands one Customer Order's Outstanding Quantity falls into, read from
+        its `needed_by` against the day it is read (`CONTEXT.md` "Urgency Band"): `overdue`, its
+        needed-by date having passed; `due_soon`, needed within the next fourteen days; `later`,
+        needed after those fourteen days.
+
+        The bands **partition** the demand, so each quantity appears in exactly one and the three sum
+        to the Warehouse's `totalOutstandingQuantity`.
+
+        The fourteen days are a span this feature's owners fixed: no artifact in the product records a
+        lead time, a service window or any horizon one could be derived from. **Not a priority a
+        member sets, and not a service level the product promises** — the date the member recorded is
+        the only input.
+
+        Carried as the property names of `DemandPressureWarehouse` rather than as a keyed list,
+        because the three are fixed and each is a distinct figure the design labels separately.
+
+    ArrivalTimingBucketKind:
+      type: string
+      enum: [overdue, week]
+      description: |
+        **New.** Which kind of bucket one position on the Arrival Timing axis is. Exactly one
+        `overdue` bucket, first, then eight `week` buckets (AC-07).
+
+        `overdue` is not a week and carries no `weekStart`: on the demand side it is everything owed
+        whose needed-by date has passed, and on the supply side the Ready drafts whose Expected
+        Arrival Date has already passed (`sad.md` §6.4 — a ruling `spec.md` does not make; see
+        `api-sync-report.md` § Finding 2).
+
+    RejectionReasonId:
+      type: string
+      maxLength: 32
+      pattern: '^[a-z][a-z0-9_]*$'
+      description: |
+        Unchanged from `arrival-inspection` (`rejectionReasonIdSchema`, `rejection_reasons.id
+        VARCHAR(32)`). Pattern-checked rather than enumerated for the reason that feature states: the
+        catalogue is **data**, extended by a migration, and freezing today's ten Reasons into the
+        schema would make the eleventh a contract change.
+      examples: ['damaged_in_transit']
+
+    IanaTimeZone:
+      type: string
+      maxLength: 64
+      description: |
+        **New.** The one deployment timezone every week boundary and every date comparison in this
+        feature is computed in — `APP_TIMEZONE`, an IANA zone name, default `UTC`, read through
+        `ConfigService` and passed as a **bound parameter** to the statement
+        (`data-model.md` § Time, timezone and the week).
+
+        It is carried on the two Panels that **label** a week, because `spec.md` §8's default requires
+        the zone be stated wherever one is labelled and the client cannot otherwise know it. It is not
+        a column, not a per-Warehouse or per-user setting, and not the connection's implicit
+        `TimeZone`.
+
+        The week start itself needs no configuration: PostgreSQL's `date_trunc('week', …)` is ISO-8601
+        and begins on Monday, which is exactly the stated default.
+      examples: ['UTC', 'Europe/Kyiv']
+
+    ##########################################################################################
+    # Warehouse surface — Coverage Gap
+    ##########################################################################################
+
+    CoverageGapPanel:
+      type: object
+      description: |
+        The Coverage Gap for one Warehouse. Bounded by the server at ten named rows plus at most one
+        Remainder Row (`spec.md` §6 "Row bounding"), so the client neither pages nor truncates.
+      required: [rows, remainder]
+      additionalProperties: false
+      properties:
+        rows:
+          type: array
+          maxItems: 10
+          description: |
+            The Items with the largest Uncovered Quantity, drawn **only** from those some Unfulfilled
+            Customer Order still asks for. Ordered by `uncoveredQuantity` descending, then
+            `totalOutstandingQuantity` descending, then `sku` ascending — a total order, so the same
+            Warehouse read twice at the same moment gives the same ten Items in the same sequence
+            (AC-03).
+          items: { $ref: '#/components/schemas/CoverageGapRow' }
+        remainder:
+          oneOf:
+            - $ref: '#/components/schemas/CoverageGapRemainder'
+            - type: 'null'
+          description: |
+            Every Item below the tenth, added up, stating how many it holds (AC-03,
+            `CONTEXT.md` "Remainder Row"). `null` when ten or fewer Items qualify — not a row of
+            zeros, and not an Other category anything was assigned to.
+
+    CoverageGapRow:
+      type: object
+      required:
+        [
+          itemId,
+          sku,
+          totalOutstandingQuantity,
+          onHandQuantity,
+          inboundQuantity,
+          uncoveredQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        itemId:
+          type: string
+          format: uuid
+          description: '`items.id`. Carried so the client can key the row; this surface has no drill-through (`spec.md` §3).'
+        sku:
+          type: string
+          minLength: 1
+          description: '`items.sku` (TEXT NOT NULL). The third sort key, and what names the row to the member.'
+        totalOutstandingQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(customer_orders.outstanding_quantity)` over this Item's **Unfulfilled** Customer
+            Orders. The second sort key. A cancelled order's retained outstanding quantity is excluded
+            by the `state = 'unfulfilled'` predicate (AC-04).
+        onHandQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `items.on_hand_quantity` (INTEGER NOT NULL, `>= 0`), read directly. `deactivated_at` is
+            read by nothing here and filters nothing (AC-25).
+        inboundQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(purchase_draft_lines.ordered_quantity)` over the lines naming this Item on drafts in
+            `draft` or `ready_for_ordering`, **both** Delivery Modes (AC-08, AC-11). Never derived
+            from a link's stated quantity (AC-06). Aggregated in its own CTE and joined on `item_id`,
+            so it does not move when the Item gains a Customer Order (AC-06a).
+        uncoveredQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `GREATEST(totalOutstandingQuantity - onHandQuantity - inboundQuantity, 0)` — the first
+            sort key. Never negative: an Item covered beyond its demand reports `0` rather than a
+            surplus (AC-05).
+
+    CoverageGapRemainder:
+      type: object
+      required:
+        [
+          itemCount,
+          totalOutstandingQuantity,
+          onHandQuantity,
+          inboundQuantity,
+          uncoveredQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        itemCount:
+          type: integer
+          minimum: 1
+          description: 'How many Items this row holds — what AC-03 requires it state, so the smallest bar on the chart is never anonymous.'
+        totalOutstandingQuantity: { type: integer, minimum: 0 }
+        onHandQuantity: { type: integer, minimum: 0 }
+        inboundQuantity: { type: integer, minimum: 0 }
+        uncoveredQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The four quantities are the per-Item figures summed across the Items this row holds, each
+            on the same terms as `CoverageGapRow`. The design draws the Remainder Row as a bar of the
+            same three segments, so they are carried rather than left to a second read.
+
+    ##########################################################################################
+    # Warehouse surface — Arrival Timing
+    ##########################################################################################
+
+    ArrivalTimingPanel:
+      type: object
+      description: |
+        Two independent series over one shared bucket axis, plus the four exclusions that keep either
+        from being read as the whole of what is owed or on order.
+      required: [timezone, buckets, exclusions]
+      additionalProperties: false
+      properties:
+        timezone:
+          $ref: '#/components/schemas/IanaTimeZone'
+        buckets:
+          type: array
+          minItems: 9
+          maxItems: 9
+          description: |
+            Exactly nine, in order: the `overdue` bucket, then the eight weeks beginning with the week
+            in progress (AC-07). A bucket with nothing in it is present and reports `0` — the axis is
+            fixed, and a missing bucket would be read as a gap rather than as an empty week.
+          items: { $ref: '#/components/schemas/ArrivalTimingBucket' }
+        exclusions:
+          $ref: '#/components/schemas/ArrivalTimingExclusions'
+
+    ArrivalTimingBucket:
+      type: object
+      required: [kind, weekStart, owedQuantity, expectedQuantity]
+      additionalProperties: false
+      properties:
+        kind: { $ref: '#/components/schemas/ArrivalTimingBucketKind' }
+        weekStart:
+          type: [string, 'null']
+          format: date
+          description: |
+            The Monday the week begins on, in `timezone` — `date_trunc('week', …)`, which is ISO-8601
+            and therefore Monday-start without configuration. **`null` on the `overdue` bucket**,
+            which is not a week.
+        owedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(customer_orders.outstanding_quantity)` over **Unfulfilled** Customer Orders whose
+            `needed_by` falls in this bucket (AC-04 excludes the cancelled ones). On the `overdue`
+            bucket, everything whose needed-by date has passed.
+        expectedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(purchase_draft_lines.ordered_quantity)` over the **Via Warehouse** lines of the
+            Purchase Drafts standing in `ready_for_ordering` **at the moment of the read**, whose
+            `expected_arrival_date` falls in this bucket. Direct to Customer lines count toward
+            nothing about the dock (AC-08).
+
+            **Never netted against `owedQuantity`.** No record links a week's arrivals to that week's
+            demand, and this response claims none (`CONTEXT.md` "Arrival Timing").
+
+            On the `overdue` bucket: the Ready drafts whose Expected Arrival Date has already passed
+            (`sad.md` §6.4's ruling; `api-sync-report.md` § Finding 2).
+
+    ArrivalTimingExclusions:
+      type: object
+      description: |
+        The four things this Panel leaves out, each with its own stated count, computed by the same
+        statement (AC-07, AC-08a, `spec.md` §6 "Exclusion accounting" at 100%). They are fields rather
+        than a second read because a client that subtracts cannot hold that target.
+      required:
+        [
+          beyondHorizon,
+          undatedReadyDrafts,
+          datedDraftsStillInDraft,
+          draftsSinceClosedOrDiscarded,
+        ]
+      additionalProperties: false
+      properties:
+        beyondHorizon:
+          type: object
+          description: 'Demand owed after the eighth week, placed in no bucket, so the eight weeks are never read as the whole of what is owed (AC-07).'
+          required: [owedQuantity, customerOrderCount]
+          additionalProperties: false
+          properties:
+            owedQuantity: { type: integer, minimum: 0 }
+            customerOrderCount:
+              type: integer
+              minimum: 0
+              description: 'How many Unfulfilled Customer Orders that quantity covers — required by AC-07 beside the quantity itself.'
+        undatedReadyDrafts:
+          type: object
+          description: |
+            Purchase Drafts in `ready_for_ordering` carrying no `expected_arrival_date`. They appear
+            in no week and are stated rather than left to be inferred from a total that does not add
+            up (AC-08a, `CONTEXT.md` § Invariants).
+          required: [draftCount, orderedQuantity]
+          additionalProperties: false
+          properties:
+            draftCount: { type: integer, minimum: 0 }
+            orderedQuantity:
+              type: integer
+              minimum: 0
+              description: "The ordered quantity those drafts' Via Warehouse lines cover — AC-08a requires both figures."
+        datedDraftsStillInDraft:
+          type: object
+          description: |
+            Purchase Drafts still in `draft` that already carry an `expected_arrival_date`. The date
+            is a working note rather than the commitment freezing makes of it, so the draft appears in
+            no week — while still counting toward the Coverage Gap's `inboundQuantity` beside it,
+            which is exactly the difference this count explains (AC-08a).
+          required: [draftCount, orderedQuantity]
+          additionalProperties: false
+          properties:
+            draftCount: { type: integer, minimum: 0 }
+            orderedQuantity: { type: integer, minimum: 0 }
+        draftsSinceClosedOrDiscarded:
+          type: object
+          description: |
+            Purchase Drafts carrying an `expected_arrival_date` that have since reached `closed` or
+            been `discarded`. Their date then describes goods whose ending has been recorded, or that
+            will not come, rather than goods still awaited (AC-07).
+
+            Count only: AC-07 asks that such a draft count toward no week and `design-handoff.md`
+            carries it as one of four footnote **counts**; no criterion asks for its quantity. See
+            `api-sync-report.md` § Finding 3.
+          required: [draftCount]
+          additionalProperties: false
+          properties:
+            draftCount: { type: integer, minimum: 0 }
+
+    ##########################################################################################
+    # Warehouse surface — Purchasing Pipeline
+    ##########################################################################################
+
+    PurchasingPipelinePanel:
+      type: object
+      required: [states]
+      additionalProperties: false
+      properties:
+        states:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: 'Exactly two rows, `draft` then `ready_for_ordering` (AC-11). Counts drafts, never quantities.'
+          items: { $ref: '#/components/schemas/PurchasingPipelineStateRow' }
+
+    PurchasingPipelineStateRow:
+      type: object
+      required: [state, bands]
+      additionalProperties: false
+      properties:
+        state: { $ref: '#/components/schemas/OpenPurchaseDraftState' }
+        bands:
+          type: array
+          minItems: 4
+          maxItems: 4
+          description: 'All four Age Bands, in order, a band with no draft reporting `0` (AC-10).'
+          items: { $ref: '#/components/schemas/PurchasingPipelineBand' }
+
+    PurchasingPipelineBand:
+      type: object
+      required: [ageBand, draftCount]
+      additionalProperties: false
+      properties:
+        ageBand: { $ref: '#/components/schemas/AgeBand' }
+        draftCount:
+          type: integer
+          minimum: 0
+          description: '`COUNT(purchase_drafts.id)` — drafts, never quantities (`CONTEXT.md` "Purchasing Pipeline").'
+
+    ##########################################################################################
+    # Warehouse surface — Reason Concentration
+    ##########################################################################################
+
+    ReasonConcentrationPanel:
+      type: object
+      required: [totalRefusedQuantity, rows, remainder]
+      additionalProperties: false
+      properties:
+        totalRefusedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The Warehouse's whole refused quantity, both Rejection Sources and every Disposition — the
+            denominator `sharePercent` and `cumulativeSharePercent` are taken against. Carried so the
+            client never reconstructs it from a truncated list.
+        rows:
+          type: array
+          maxItems: 10
+          description: 'The Rejection Reasons ordered by `refusedQuantity` descending (AC-12).'
+          items: { $ref: '#/components/schemas/ReasonConcentrationRow' }
+        remainder:
+          oneOf:
+            - $ref: '#/components/schemas/ReasonConcentrationRemainder'
+            - type: 'null'
+          description: |
+            Every Reason beyond the tenth, added up, stating how many it holds. **`null` while nothing
+            has been gathered into it** — AC-12 requires no Remainder Row be presented at all in that
+            case, which a row of zeros would violate.
+
+    ReasonConcentrationRow:
+      type: object
+      required:
+        [
+          rejectionReasonId,
+          label,
+          refusedQuantity,
+          sharePercent,
+          cumulativeSharePercent,
+          undecidedQuantity,
+          customerReportedQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        rejectionReasonId: { $ref: '#/components/schemas/RejectionReasonId' }
+        label:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: |
+            `rejection_reasons.label` (VARCHAR(100) NOT NULL) — the catalogue's current wording, read
+            live rather than copied, exactly as `arrival-inspection` reads it. What names the row to
+            the member; the design prints "Damaged in transit", not the identifier.
+
+            **`# unresolved` — this is the one column the read model does not list.** `data-model.md`
+            § The read model gives Reason Concentration `rejection_reason_id`, `quantity`,
+            `disposition` and `delivery_mode` and no label, so the statement needs one join to
+            `rejection_reasons` that the model does not yet record, and § Indexes measured the plan
+            without it.
+
+            Resolved **fix the source first**: this field stays as written and the contract is not
+            final until `data-model.md` § The read model records the column and the join. Re-run
+            `/api dashboards --reconcile` afterwards to lift this note. See `api-sync-report.md`
+            § Finding 1.
+        refusedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(purchase_draft_line_rejections.quantity)` for this Reason under the Warehouse
+            predicate. **Both** Rejection Sources, because a Warehouse's Rejections are its own
+            wherever the goods were refused — which is why the Direct to Customer exclusion governing
+            the dock figures does not govern this one (AC-12, `CONTEXT.md` § Invariants).
+        sharePercent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: "This Reason's share of `totalRefusedQuantity`, as a percentage, rounded by the server to one decimal place."
+        cumulativeSharePercent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: |
+            The running share down the order, computed as a window function over it — the "running
+            total" `CONTEXT.md` "Reason Concentration" names, and the design's `Cum.` column.
+
+            It is a **numeric column, deliberately not a line on a second axis**: the design records
+            that a quantity bar against a cumulative-% line invents a correlation the data does not
+            contain.
+        undecidedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The part of `refusedQuantity` whose `disposition` is still `undecided`.
+
+            **Not a segment of the bar.** A Rejection can be both undecided and customer-reported, so
+            stacking this with `customerReportedQuantity` would double-count it (AC-12). The two
+            overlap freely and neither is part of a partition; either may equal `refusedQuantity`.
+        customerReportedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The part of `refusedQuantity` refused by the end customer rather than at the dock — read
+            from the Rejection's own `delivery_mode = 'direct_to_customer'`, which
+            `chk_purchase_draft_line_rejections_source_matches_mode` makes equivalent to
+            `source = 'customer_reported'`, so no join to the line is needed
+            (`data-model.md` § `purchase_draft_line_rejections`).
+
+    ReasonConcentrationRemainder:
+      type: object
+      required:
+        [
+          reasonCount,
+          refusedQuantity,
+          undecidedQuantity,
+          customerReportedQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        reasonCount:
+          type: integer
+          minimum: 1
+          description: 'How many Rejection Reasons this row holds — what AC-12 requires it state.'
+        refusedQuantity: { type: integer, minimum: 0 }
+        undecidedQuantity: { type: integer, minimum: 0 }
+        customerReportedQuantity: { type: integer, minimum: 0 }
+
+    ##########################################################################################
+    # Workspace surface — shared shape
+    ##########################################################################################
+
+    ArchivedWarehouseCount:
+      type: integer
+      minimum: 0
+      description: |
+        How many of the Workspace's Warehouses are archived and therefore absent from this Panel.
+        Every Workspace read scopes itself to `warehouses WHERE workspace_id = $1 AND archived_at IS
+        NULL` and states this count as a field of its own — `spec.md` §8's stated default, and the
+        exclusion accounting `spec.md` §6 sets at 100%.
+
+        It discloses nothing the reader may not have: the actor holds a Workspace-level Permission
+        over the whole Workspace, and the count is bounded by the same predicate as the figures beside
+        it (`data-model.md` § Security).
+
+    ##########################################################################################
+    # Workspace surface — Demand Pressure
+    ##########################################################################################
+
+    DemandPressurePanel:
+      type: object
+      required: [archivedWarehouseCount, warehouses]
+      additionalProperties: false
+      properties:
+        archivedWarehouseCount:
+          { $ref: '#/components/schemas/ArchivedWarehouseCount' }
+        warehouses:
+          type: array
+          description: |
+            Every **active** Warehouse of the Workspace, including one with nothing outstanding — the
+            population is bounded at 20 by `spec.md` §1, so this Panel pages nothing and carries no
+            Remainder Row (`spec.md` §6 "Row bounding").
+          items: { $ref: '#/components/schemas/DemandPressureWarehouse' }
+
+    DemandPressureWarehouse:
+      type: object
+      required:
+        [
+          warehouseId,
+          warehouseName,
+          overdueQuantity,
+          dueSoonQuantity,
+          laterQuantity,
+          totalOutstandingQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        warehouseName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: '`warehouses.name`. Each bar is direct-labelled with it, so no legend has to be consulted.'
+        overdueQuantity:
+          type: integer
+          minimum: 0
+          description: '`UrgencyBand` `overdue` — outstanding quantity whose `needed_by` has passed, on Unfulfilled Customer Orders only (AC-04).'
+        dueSoonQuantity:
+          type: integer
+          minimum: 0
+          description: '`UrgencyBand` `due_soon` — needed within the next fourteen days.'
+        laterQuantity:
+          type: integer
+          minimum: 0
+          description: '`UrgencyBand` `later` — needed after those fourteen days.'
+        totalOutstandingQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The three bands summed. They partition the demand, so this always equals
+            `overdueQuantity + dueSoonQuantity + laterQuantity`; it is carried because the design
+            prints it as its own column and because it is what the shared quantity scale is taken
+            against (AC-14).
+
+    ##########################################################################################
+    # Workspace surface — Order Flow
+    ##########################################################################################
+
+    OrderFlowPanel:
+      type: object
+      description: |
+        The one Panel that reports the Workspace's own trend rather than setting its Warehouses beside
+        one another: twelve weeks pooled across the Workspace, naming no Warehouse (AC-16).
+      required: [timezone, archivedWarehouseCount, weeks]
+      additionalProperties: false
+      properties:
+        timezone: { $ref: '#/components/schemas/IanaTimeZone' }
+        archivedWarehouseCount:
+          { $ref: '#/components/schemas/ArchivedWarehouseCount' }
+        weeks:
+          type: array
+          minItems: 12
+          maxItems: 12
+          description: |
+            Exactly twelve, oldest first, the last being the week in progress. A week with nothing
+            recorded in it is present and reports `0`.
+          items: { $ref: '#/components/schemas/OrderFlowWeek' }
+
+    OrderFlowWeek:
+      type: object
+      required:
+        [
+          weekStart,
+          recordedQuantity,
+          assignedQuantity,
+          cancelledQuantity,
+          stillAwaitedQuantity,
+        ]
+      additionalProperties: false
+      properties:
+        weekStart:
+          type: string
+          format: date
+          description: "`date_trunc('week', customer_orders.created_at AT TIME ZONE $tz)` — the Monday this week begins on, in `timezone`."
+        recordedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The week's whole: `SUM(customer_orders.quantity)` over the Customer Orders **first
+            recorded** in it, in **every** state, cancelled ones included — the one place on either
+            surface a cancelled order contributes (AC-04, AC-16).
+
+            **Read as it stands, not as it stood** (AC-17a). Nothing keeps what a Customer Order asked
+            for at an earlier moment, so amending one changes what a past week reports, and the Panel
+            states so (`CONTEXT.md` "Recorded Quantity").
+        assignedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(arrival_allocations.allocated_quantity)` over every Allocation made to those Customer
+            Orders, **whenever it was made**, added against the week the order was recorded rather
+            than the week the goods arrived (AC-17).
+
+            Aggregated per `customer_order_id` in its own CTE and joined back, so a Customer Order
+            with three Allocations reports the same `recordedQuantity` as one with none (AC-06a).
+
+            **Named quantity assigned, not orders fulfilled.** No record states when a Customer Order
+            became Fulfilled, and nothing here claims one did (`CONTEXT.md` "Assigned Quantity").
+        cancelledQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            The outstanding quantity retained by the Customer Orders of this week since cancelled —
+            the part **withdrawn** from what the week took on, never demand the Workspace still
+            carries (AC-04, AC-16).
+
+            It is that retained `outstanding_quantity` and not the whole `quantity`:
+            `chk_customer_orders_state_outstanding` keeps what the cancellation left uncovered, no
+            column records what was assigned before it, and stating the whole quantity would
+            double-count the part already allocated (`data-model.md` § The read model).
+        stillAwaitedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `recordedQuantity - assignedQuantity - cancelledQuantity` — the part of the week neither
+            assigned nor withdrawn. Carried as a field so the client subtracts nothing; the design
+            stacks all three against the week's whole.
+
+    ##########################################################################################
+    # Workspace surface — Purchasing Spread
+    ##########################################################################################
+
+    PurchasingSpreadPanel:
+      type: object
+      required: [archivedWarehouseCount, warehouses]
+      additionalProperties: false
+      properties:
+        archivedWarehouseCount:
+          { $ref: '#/components/schemas/ArchivedWarehouseCount' }
+        warehouses:
+          type: array
+          description: 'Every active Warehouse of the Workspace. Bounded at 20 by `spec.md` §1; no Remainder Row.'
+          items: { $ref: '#/components/schemas/PurchasingSpreadWarehouse' }
+
+    PurchasingSpreadWarehouse:
+      type: object
+      required: [warehouseId, warehouseName, counts]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        warehouseName: { type: string, minLength: 1, maxLength: 100 }
+        counts:
+          type: array
+          minItems: 4
+          maxItems: 4
+          description: |
+            All four Purchase Draft states, in order, a pairing with no draft reporting `0` — the
+            design prints the count in every cell so the fill is a scanning aid and never the only
+            encoding (AC-18).
+          items: { $ref: '#/components/schemas/PurchasingSpreadCell' }
+
+    PurchasingSpreadCell:
+      type: object
+      required: [state, draftCount]
+      additionalProperties: false
+      properties:
+        state:
+          $ref: '#/components/schemas/PurchaseDraftState'
+          description: |
+            All four, `closed` and `discarded` included. **This is the one Panel on either surface
+            that counts a draft the open-state rule excludes everywhere else** (AC-18,
+            `CONTEXT.md` § Invariants).
+        draftCount: { type: integer, minimum: 0 }
+
+    ##########################################################################################
+    # Workspace surface — Receipt Reliability
+    ##########################################################################################
+
+    ReceiptReliabilityPanel:
+      type: object
+      required: [archivedWarehouseCount, warehouses]
+      additionalProperties: false
+      properties:
+        archivedWarehouseCount:
+          { $ref: '#/components/schemas/ArchivedWarehouseCount' }
+        warehouses:
+          type: array
+          description: |
+            Every active Warehouse, **including one with no rate to report** (AC-20a) — it is returned
+            with both rates `null` and its exclusion counts intact, and the design leaves it unplotted
+            and names it in the footnote. Omitting it would make "no record" indistinguishable from
+            "not in this Workspace".
+          items: { $ref: '#/components/schemas/ReceiptReliabilityWarehouse' }
+
+    ReceiptReliabilityWarehouse:
+      type: object
+      required:
+        [
+          warehouseId,
+          warehouseName,
+          onTimeArrivalRatePercent,
+          conformanceRatePercent,
+          receivedQuantity,
+          exclusions,
+        ]
+      additionalProperties: false
+      properties:
+        warehouseId: { type: string, format: uuid }
+        warehouseName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 'Each mark is direct-labelled with it, so no legend has to be consulted to read the plot (AC-19).'
+        onTimeArrivalRatePercent:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 100
+          description: |
+            The share of this Warehouse's **Via Warehouse** Purchase Draft Lines on which something
+            was received, whose `ending_recorded_at` — taken as a date in the deployment timezone —
+            was no later than the `expected_arrival_date` their Purchase Draft carried
+            (`CONTEXT.md` "On-time Arrival Rate", AC-20b).
+
+            Entering **neither** part of the rate: a line on an undated draft; a line with no ending
+            recorded at all, because nothing has yet said the goods reached the dock; a line whose
+            ending recorded that nothing was received, because no arrival happened that could be
+            timely or late; and every Direct to Customer line, because those goods never reach the
+            dock. None of these is a failure and none is counted as one (AC-20, AC-20b).
+
+            **`null`, never `0`, when no line qualifies** (AC-20a), so a Warehouse with no record is
+            never read as the worst performer.
+
+            Read over the **whole retained record**, no period bound.
+        conformanceRatePercent:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 100
+          description: |
+            The share of this Warehouse's Purchase Draft Lines carrying a recorded Pre-receipt
+            Conformance whose verdict is `met`, among those carrying `met` or `not_met`
+            (`CONTEXT.md` "Conformance Rate").
+
+            **Not restricted by Delivery Mode** — neither the glossary nor AC-20 restricts it, so a
+            Direct to Customer line carrying `met` or `not_met` counts here even though it counts in
+            no on-time figure. This asymmetry is easy to get wrong in both directions
+            (`data-model.md` § The read model).
+
+            A line carrying no verdict is **unknown rather than failed** and enters neither part; a
+            `not_applicable` line was given no instruction to honour and enters neither (AC-20). Both
+            exclusions are schema-decidable:
+            `chk_purchase_draft_lines_conformance_requires_ending` makes a verdict exist only where an
+            ending recorded something, and
+            `chk_purchase_draft_lines_pre_receipt_conformance_instruction` makes `not_applicable`
+            exactly the lines frozen carrying neither a Packaging Type nor a Value-adding Note.
+
+            **`null`, never `0`, when no line qualifies** (AC-20a). Independently nullable from
+            `onTimeArrivalRatePercent`, because the two denominators are independent; both `null` is
+            AC-20a's case.
+
+            It carries every ending recorded before `arrival-inspection` shipped, none of which was
+            backfilled — which is what `spec.md` §7's conformance-coverage figure exists to expose.
+        receivedQuantity:
+          type: integer
+          minimum: 0
+          description: |
+            `SUM(purchase_draft_lines.ending_quantity)` over this Warehouse's Via Warehouse lines
+            whose ending recorded something. The **absolute** the design scales each mark's area by,
+            relative to the largest in the set — the scaling is the client's, the figure is the
+            server's (`sad.md` §6 "Flags raised while drawing these flows").
+        exclusions:
+          $ref: '#/components/schemas/ReceiptReliabilityExclusions'
+
+    ReceiptReliabilityExclusions:
+      type: object
+      description: |
+        How much of **this Warehouse's** record each exclusion covers (AC-20), counted in Purchase
+        Draft Lines by the same statement and bounded by the same Workspace predicate as the rates
+        beside them (`data-model.md` § Security).
+
+        The six are not disjoint: a line may be both undated and carry no conformance verdict, and a
+        Direct to Customer line is excluded from the on-time rate whatever else is true of it. They
+        are six independent counts, not a partition, and nothing here should be summed.
+      required:
+        [
+          undatedLineCount,
+          noEndingRecordedLineCount,
+          nothingReceivedLineCount,
+          directToCustomerLineCount,
+          unrecordedConformanceLineCount,
+          notApplicableConformanceLineCount,
+        ]
+      additionalProperties: false
+      properties:
+        undatedLineCount:
+          type: integer
+          minimum: 0
+          description: 'Lines whose Purchase Draft carries no `expected_arrival_date` — excluded from both parts of the On-time Arrival Rate (AC-20).'
+        noEndingRecordedLineCount:
+          type: integer
+          minimum: 0
+          description: 'Via Warehouse lines with no ending recorded at all — nothing has yet said the goods reached the dock (AC-20b).'
+        nothingReceivedLineCount:
+          type: integer
+          minimum: 0
+          description: 'Lines whose ending recorded that nothing was received — no arrival happened that could be timely or late (AC-20b).'
+        directToCustomerLineCount:
+          type: integer
+          minimum: 0
+          description: |
+            Lines whose `delivery_mode` is `direct_to_customer` — excluded from the On-time Arrival
+            Rate and from `receivedQuantity`, because those goods never reach the dock (AC-20b). They
+            are **not** excluded from the Conformance Rate.
+        unrecordedConformanceLineCount:
+          type: integer
+          minimum: 0
+          description: 'Lines carrying no recorded Pre-receipt Conformance — unknown rather than failed (AC-20).'
+        notApplicableConformanceLineCount:
+          type: integer
+          minimum: 0
+          description: 'Lines recorded `not_applicable` — given no instruction to honour (AC-20).'

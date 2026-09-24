@@ -290,7 +290,7 @@ describe('web module boundaries', () => {
   });
 
   describe('modules/warehouse file manifest', () => {
-    it('retains exactly the six files CR-AC-01 enumerates', () => {
+    it('holds exactly the Warehouse Dashboard shell CR-AC-01 and T16 enumerate', () => {
       // The in-Warehouse destination and nothing else. `useRecordWarehouseEntry`
       // stays because it serves *entering* a Warehouse rather than
       // administering the set of them, and because its one outside importer is
@@ -298,6 +298,18 @@ describe('web module boundaries', () => {
       // another entity's module, so the tiebreak's scope condition fails and it
       // does not reach the hook
       // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`).
+      //
+      // T16 replaced the placeholder page with the Dashboard shell, so
+      // `DesignSystemExample` and its spec leave the manifest with it: the page
+      // was their only renderer, and a component nothing renders is not a file
+      // this module owns. What arrives in their place is the shell the task
+      // enumerates — the loader, the API slice, the grid grouping, and the
+      // page's own spec.
+      //
+      // `components/dashboard/` is a component grouping, not a module home: it
+      // carries no `route.tsx`, no `page.tsx` and no module-list entry
+      // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
+      // § "Home versus grouping").
       expect(moduleFiles('warehouse')).toStrictEqual([
         ...WAREHOUSE_MODULE_MANIFEST,
       ]);

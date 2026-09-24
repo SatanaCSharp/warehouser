@@ -27,27 +27,38 @@ import {
 // passing only a `warehouseId` and a `userId` (never a Workspace concept).
 import { WorkspaceProvisioningService } from 'workspaces/domain/services/workspace-provisioning.service';
 
-// spec.md §1: the full initial Workspace Owner Workspace Permission set
-// (sixteen entries), mirrored by `openapi.yaml`'s `RegistrationResult`
-// example and seeded as catalogue data by `CreateWorkspaceAuthoritySchema`.
-const INITIAL_WORKSPACE_OWNER_PERMISSION_IDS = [
-  'WAREHOUSES:ARCHIVE',
-  'WAREHOUSES:CREATE',
-  'WAREHOUSES:RENAME',
-  'WAREHOUSES:WATCH',
-  'WAREHOUSE_MEMBERSHIPS:ASSIGN',
-  'WAREHOUSE_MEMBERSHIPS:REVOKE',
-  'WORKSPACE:RENAME',
-  'WORKSPACE_MEMBERS:ADD',
-  'WORKSPACE_MEMBERS:REMOVE',
-  'WORKSPACE_MEMBERS:WATCH',
-  'WORKSPACE_OWNER_ROLE:REASSIGN',
-  'WORKSPACE_ROLES:ASSIGN',
-  'WORKSPACE_ROLES:CREATE',
-  'WORKSPACE_ROLES:DELETE',
-  'WORKSPACE_ROLES:UPDATE',
-  'WORKSPACE_ROLES:WATCH',
-].sort();
+// spec.md §1: the full initial Workspace Owner Workspace Permission set — read from the seeded
+// `workspace_permissions` catalogue rather than restated here.
+//
+// This file used to carry the sixteen identifiers of migration `01` as a literal, and that literal
+// is what let the defect ship twice: `WAREHOUSES:ADDRESS_UPDATE` (`delivery-addresses` AC-10) and
+// `WAREHOUSE_PERFORMANCE:WATCH` (`dashboards` AC-21/AC-21a) were each seeded, backfilled onto the
+// `workspace_owner` Roles that already existed, and left out of provisioning, while this suite went
+// on comparing provisioning against its own stale copy and passing. Reading the catalogue the
+// migrations actually built is what makes the next seeded Permission fail here until provisioning
+// grants it — with nothing in this file to edit.
+//
+// The template this tier restores is migrated, and `workspace_permissions` is deliberately not
+// truncated between cases (see `afterEach`), so these rows are the real catalogue.
+const readSeededWorkspacePermissionIds = async (): Promise<string[]> => {
+  const rows = (await dataSource.query(
+    'SELECT id FROM workspace_permissions ORDER BY id',
+  )) as { readonly id: string }[];
+
+  return rows.map(({ id }) => id);
+};
+
+const readOwnerGrantedPermissionIds = async (
+  workspaceRoleId: string,
+): Promise<string[]> => {
+  const rows = (await dataSource.query(
+    `SELECT workspace_permission_id FROM workspace_role_permissions
+     WHERE workspace_role_id = $1 ORDER BY workspace_permission_id`,
+    [workspaceRoleId],
+  )) as { readonly workspace_permission_id: string }[];
+
+  return rows.map((row) => row.workspace_permission_id);
+};
 
 // Every table registration bootstrap writes to, in the order sad.md §6.1's
 // sequence diagram persists them. Used both for row-count assertions (AC-01)
@@ -153,6 +164,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
       'protected Warehouse Manager Role, Warehouse membership, and session, as one outcome, ' +
       'and confirms immediate access (AC-01)',
     async () => {
+      const seededCatalogue = await readSeededWorkspacePermissionIds();
       const result = await register();
 
       expect(result.workspace).toMatchObject({ name: null });
@@ -165,9 +177,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
           sessions: '1',
           workspaces: '1',
           workspace_roles: '1',
-          workspace_role_permissions: String(
-            INITIAL_WORKSPACE_OWNER_PERMISSION_IDS.length,
-          ),
+          workspace_role_permissions: String(seededCatalogue.length),
           workspace_memberships: '1',
           warehouses: '1',
           roles: '1',
@@ -177,7 +187,7 @@ describe('RegisterCommand workspace provisioning transaction', () => {
       ]);
 
       expect([...result.workspacePermissionIds].sort()).toEqual(
-        INITIAL_WORKSPACE_OWNER_PERMISSION_IDS,
+        seededCatalogue,
       );
 
       const [userRow] = await dataSource.query(
@@ -199,6 +209,35 @@ describe('RegisterCommand workspace provisioning transaction', () => {
       expect(ownerMembershipRow).toMatchObject({
         workspace_role_kind: 'workspace_owner',
       });
+    },
+  );
+
+  it(
+    'grants the newly provisioned Workspace Owner Role every Permission the migrations seeded, ' +
+      'so a Permission added to the catalogue cannot reach existing Owners alone ' +
+      '(delivery-addresses AC-10, dashboards AC-21a)',
+    async () => {
+      // The regression this case exists for, and the reason it reads both sides from the database
+      // rather than from a list: a grant migration seeds a Workspace Permission and backfills the
+      // `workspace_owner` Roles that already exist, which leaves the Owner of the *next* registered
+      // Workspace short of it unless provisioning grants it too. `WAREHOUSES:ADDRESS_UPDATE` and
+      // `WAREHOUSE_PERFORMANCE:WATCH` both shipped that way — the second one denied every new
+      // Owner their own Workspace Dashboard (`403 workspace.denied` on all four Panels).
+      //
+      // Nothing here names a Permission, so the next seeded one is covered the moment its
+      // migration joins the template: it appears on the left of this comparison without anyone
+      // editing this file, and fails until provisioning puts it on the right.
+      const seededCatalogue = await readSeededWorkspacePermissionIds();
+      const result = await register();
+
+      const [ownerRoleRow] = (await dataSource.query(
+        `SELECT id FROM workspace_roles WHERE workspace_id = $1 AND kind = 'workspace_owner'`,
+        [result.workspace.id],
+      )) as { readonly id: string }[];
+
+      await expect(
+        readOwnerGrantedPermissionIds(ownerRoleRow.id),
+      ).resolves.toEqual(seededCatalogue);
     },
   );
 

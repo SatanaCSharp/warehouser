@@ -6,8 +6,10 @@ import { AccessRestModule } from 'access';
 import { AuthModule } from 'auth/auth.module';
 import { CustomerOrdersModule } from 'customer-orders';
 import { CustomersModule } from 'customers';
+import { DashboardsRestModule } from 'dashboards';
 import { ItemsModule } from 'items';
 import { PurchaseDraftsModule } from 'purchase-drafts';
+import { AppTimezoneModule } from 'shared/config/app-timezone.module';
 import { createTypeOrmOptions } from 'shared/database/typeorm.options';
 import { DomainModule } from 'shared/domain/domain.module';
 import { WriteRateLimitModule } from 'shared/guards/write-rate-limit.module';
@@ -22,6 +24,7 @@ import { WorkspacesRestModule } from 'workspaces';
     UsersModule,
     ConfigModule.forRoot({ isGlobal: true }),
     AppLoggerModule.forRoot(),
+    AppTimezoneModule.forRoot(),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => createTypeOrmOptions(config),
@@ -34,6 +37,7 @@ import { WorkspacesRestModule } from 'workspaces';
     CustomerOrdersModule,
     CustomersModule,
     PurchaseDraftsModule,
+    DashboardsRestModule,
     WarehousesRestModule,
     WorkspacesRestModule,
     BullModule.forRootAsync({

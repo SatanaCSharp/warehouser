@@ -304,6 +304,13 @@ Five boundaries are stated here so they are not re-derived downstream. First, a 
 **When** the member records what arrived on the Via Warehouse line and assigns it across its linked Customer Orders, and afterwards records what the customer received on the Direct to Customer line and assigns that
 **Then** the system records each line's ending with the acting member and the time, reduces what each named customer is still waiting for in both cases, leaves the draft in Ready for Ordering for as long as any of its lines still has no ending recorded, and moves it to Closed once every one of them has
 
+> **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** For a Via Warehouse
+> line, the moment its ending is recorded is taken as the moment the goods arrived, which is what a
+> reading of `ordering`'s Expected Arrival Date is judged against — the narrowest reading that makes
+> the date usable at all, since no other moment is recorded. A Direct to Customer line's ending
+> records a delivery to the customer rather than an arrival at the Transit Zone, and is never read
+> against the Expected Arrival Date.
+
 ### AC-20 (US-11) — error
 
 **Given** an authorized Warehouse Member holding `PURCHASE_DRAFTS:RECEIVE` and a Purchase Draft in Ready for Ordering holding lines of both delivery modes

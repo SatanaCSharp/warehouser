@@ -1,0 +1,249 @@
+<!doctype html>
+<!--
+  Preview evidence - design-ui skill. Review artifact only; never an implementation source.
+
+  Frame:         Dashboards / Workspace / Mobile / v1
+  Design source: docs/mockups/app.pen
+  Node ID:       z5swDF
+  Viewport:      mobile 390×1853
+  States:        all four Panels stacked in the fixed order; the surface scrolls
+-->
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboards · Workspace mobile</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-background-secondary: var(--background-secondary);
+        --color-foreground: var(--foreground);
+        --color-muted: var(--muted);
+
+        --color-surface: var(--surface);
+        --color-surface-foreground: var(--surface-foreground);
+        --color-surface-secondary: var(--surface-secondary);
+        --color-surface-tertiary: var(--surface-tertiary);
+        --color-overlay: var(--overlay);
+        --color-overlay-foreground: var(--overlay-foreground);
+
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-accent-soft: var(--accent-soft);
+        --color-accent-soft-foreground: var(--accent-soft-foreground);
+
+        --color-default: var(--default);
+        --color-default-foreground: var(--default-foreground);
+        --color-default-soft-foreground: var(--default-soft-foreground);
+        --color-success: var(--success);
+        --color-success-foreground: var(--success-foreground);
+        --color-success-soft: var(--success-soft);
+        --color-success-soft-foreground: var(--success-soft-foreground);
+        --color-warning: var(--warning);
+        --color-warning-foreground: var(--warning-foreground);
+        --color-warning-soft: var(--warning-soft);
+        --color-warning-soft-foreground: var(--warning-soft-foreground);
+        --color-danger: var(--danger);
+        --color-danger-foreground: var(--danger-foreground);
+        --color-danger-soft: var(--danger-soft);
+        --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+        --color-border: var(--border);
+        --color-separator: var(--separator);
+        --color-focus: var(--focus);
+        --color-link: var(--link);
+
+        --color-chart-3a: var(--chart-3a);
+        --color-chart-3b: var(--chart-3b);
+        --color-chart-3c: var(--chart-3c);
+        --color-chart-4a: var(--chart-4a);
+        --color-chart-4b: var(--chart-4b);
+        --color-chart-4c: var(--chart-4c);
+        --color-chart-4d: var(--chart-4d);
+        --color-chart-supply: var(--chart-supply);
+        --color-chart-track: var(--chart-track);
+        --color-chart-grid: var(--chart-grid);
+
+
+        --color-field: var(--field-background);
+        --color-field-foreground: var(--field-foreground);
+        --color-field-placeholder: var(--field-placeholder);
+        --color-field-border: var(--field-border);
+
+        --radius-field: var(--field-radius);
+        --shadow-surface: var(--surface-shadow);
+        --shadow-overlay: var(--overlay-shadow);
+      }
+
+      :root,
+      [data-theme='light'] {
+        color-scheme: light;
+
+        --white: oklch(100% 0 0);
+        --snow: oklch(0.9911 0 0);
+        --eclipse: oklch(0.2103 0.0059 285.89);
+
+        --radius: 0.5rem;
+        --field-radius: calc(var(--radius) * 1.5);
+
+        --background: oklch(0.9702 0 0);
+        --foreground: var(--eclipse);
+        --muted: oklch(0.5517 0.0138 285.94);
+
+        --surface: var(--white);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.9524 0.0013 286.37);
+        --surface-tertiary: oklch(0.9373 0.0013 286.37);
+        --overlay: var(--white);
+        --overlay-foreground: var(--foreground);
+
+        --accent: oklch(0.6204 0.195 253.83);
+        --accent-foreground: var(--snow);
+        --default: oklch(94% 0.001 286.375);
+        --default-foreground: var(--eclipse);
+
+        --success: oklch(0.7329 0.1935 150.81);
+        --success-foreground: var(--eclipse);
+        --warning: oklch(0.7819 0.1585 72.33);
+        --warning-foreground: var(--eclipse);
+        --danger: oklch(0.6532 0.2328 25.74);
+        --danger-foreground: var(--snow);
+
+        --field-background: var(--white);
+        --field-foreground: var(--eclipse);
+        --field-placeholder: var(--muted);
+        --field-border: transparent;
+
+        --border: oklch(90% 0.004 286.32);
+        --separator: oklch(92% 0.004 286.32);
+        --focus: var(--accent);
+        --link: var(--foreground);
+
+        --background-secondary: color-mix(
+          in oklab,
+          var(--background) 96%,
+          var(--foreground) 4%
+        );
+        --accent-soft: color-mix(in oklab, var(--accent) 15%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 70%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --success-soft: color-mix(in oklab, var(--success) 15%, transparent);
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 60%
+        );
+        --warning-soft: color-mix(in oklab, var(--warning) 15%, transparent);
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 70%
+        );
+        --danger-soft: color-mix(in oklab, var(--danger) 15%, transparent);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 70%,
+          var(--foreground) 40%
+        );
+
+
+        /* Chart series tokens introduced by the `dashboards` design.
+           Ordinal ramps derived from --accent (oklch H 253.83); validated with
+           dataviz scripts/validate_palette.js --ordinal (light, surface #FFFFFF).
+           --chart-supply is categorical slot 2 (blue/orange pair, CVD dE 27.4). */
+        --chart-3a: #0058b6;
+        --chart-3b: #1181ec;
+        --chart-3c: #7aaeee;
+        --chart-4a: #0058b6;
+        --chart-4b: #0072e2;
+        --chart-4c: #4391eb;
+        --chart-4d: #7cafec;
+        --chart-supply: #eb6834;
+        --chart-track: var(--surface-secondary);
+        --chart-grid: var(--separator);
+
+        --surface-shadow:
+          0 2px 4px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.06),
+          0 0 1px 0 rgba(0, 0, 0, 0.06);
+        --overlay-shadow:
+          0 2px 8px 0 rgba(0, 0, 0, 0.06), 0 -6px 12px 0 rgba(0, 0, 0, 0.03),
+          0 14px 28px 0 rgba(0, 0, 0, 0.08);
+      }
+
+      [data-theme='dark'] {
+        color-scheme: dark;
+
+        --background: oklch(12% 0.005 285.823);
+        --foreground: var(--snow);
+        --muted: oklch(70.5% 0.015 286.067);
+
+        --surface: oklch(0.2103 0.0059 285.89);
+        --surface-foreground: var(--foreground);
+        --surface-secondary: oklch(0.257 0.0037 286.14);
+        --surface-tertiary: oklch(0.2721 0.0024 247.91);
+        --overlay: oklch(0.2103 0.0059 285.89);
+        --overlay-foreground: var(--foreground);
+
+        --default: oklch(27.4% 0.006 286.033);
+        --default-foreground: var(--snow);
+        --warning: oklch(0.8203 0.1388 76.34);
+        --danger: oklch(0.594 0.1967 24.63);
+
+        --field-background: oklch(0.2103 0.0059 285.89);
+        --field-foreground: var(--foreground);
+
+        --border: oklch(28% 0.006 286.033);
+        --separator: oklch(25% 0.006 286.033);
+
+        --accent-soft: color-mix(in oklab, var(--accent) 12%, transparent);
+        --accent-soft-foreground: color-mix(
+          in oklab,
+          var(--accent) 80%,
+          var(--foreground) 30%
+        );
+        --default-soft-foreground: var(--default-foreground);
+        --danger-soft-foreground: color-mix(
+          in oklab,
+          var(--danger) 80%,
+          var(--foreground) 30%
+        );
+        --warning-soft-foreground: color-mix(
+          in oklab,
+          var(--warning) 80%,
+          var(--foreground) 30%
+        );
+        --success-soft-foreground: color-mix(
+          in oklab,
+          var(--success) 80%,
+          var(--foreground) 30%
+        );
+
+
+        --chart-3a: #0064bc;
+        --chart-3b: #1181ec;
+        --chart-3c: #6da3e4;
+        --chart-4a: #0064bc;
+        --chart-4b: #0076e4;
+        --chart-4c: #3f8ee7;
+        --chart-4d: #6fa4e4;
+        --chart-supply: #d95926;
+
+        --surface-shadow: 0 0 0 0 transparent inset;
+        --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.3) inset;
+      }
+
+    </style>
+  </head>
+
+
+  <body class="bg-background text-foreground min-h-screen antialiased">
+    <main class="mx-auto w-[390px] max-w-full">
+<div class="flex w-[390px] flex-col bg-background"><header class="flex h-[68px] px-6 w-full shrink-0 items-center gap-3 border-b border-border bg-surface"><span class="grid size-[34px] place-items-center rounded-xl bg-accent text-accent-foreground"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg></span><span class="text-lg font-semibold tracking-tight text-foreground">Warehouser</span></header><div class="w-full border-b border-border bg-surface px-5 py-2.5"><span class="flex h-10 w-full items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>Northwind Logistics<span class="flex-1"></span><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div><div class="flex flex-col gap-4 p-5"><article class="flex min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><h2 class="text-sm font-semibold text-foreground">Demand Pressure</h2><p class="text-xs text-muted">Outstanding quantity by how soon it is owed</p><div class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1"><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3a"></span><span class="text-xs text-muted">Overdue</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3b"></span><span class="text-xs text-muted">Due soon (14 days)</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3c"></span><span class="text-xs text-muted">Later</span></span></div><div class="flex flex-col gap-2.5"><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">Central DC</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">10 840</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3a" style="width:32px" title="Overdue: 1 240"></div><div class="h-[12px] bg-chart-3b" style="width:83px" title="Due soon: 3 180"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:168px" title="Later: 6 420"></div></div></div><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">Riverside</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">6 830</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3a" style="width:55px" title="Overdue: 2 110"></div><div class="h-[12px] bg-chart-3b" style="width:77px" title="Due soon: 2 940"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:47px" title="Later: 1 780"></div></div></div><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">North Hub</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">6 580</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3a" style="width:11px" title="Overdue: 420"></div><div class="h-[12px] bg-chart-3b" style="width:49px" title="Due soon: 1 860"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:113px" title="Later: 4 300"></div></div></div><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">Eastgate</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">3 390</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3a" style="width:4px" title="Overdue: 160"></div><div class="h-[12px] bg-chart-3b" style="width:26px" title="Due soon: 980"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:59px" title="Later: 2 250"></div></div></div><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">Southport</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">3 210</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3a" style="width:23px" title="Overdue: 890"></div><div class="h-[12px] bg-chart-3b" style="width:37px" title="Due soon: 1 420"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:24px" title="Later: 900"></div></div></div><div class="flex flex-col gap-1.5"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs text-foreground">Lakeview</span><span class="shrink-0 text-xs font-semibold tabular-nums text-foreground">1 460</span></div><div class="flex shrink-0 items-center gap-0.5" style="width:318px;height:12px"><div class="h-[12px] bg-chart-3b" style="width:9px" title="Due soon: 340"></div><div class="h-[12px] bg-chart-3c rounded-r-[3px]" style="width:29px" title="Later: 1 120"></div></div></div></div><p class="text-xs leading-normal text-muted">Active Warehouses only · 2 archived Warehouses are not shown</p></article><article class="flex min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><h2 class="text-sm font-semibold text-foreground">Order Flow</h2><p class="text-xs text-muted">What each week took on, and what became of it</p><div class="flex w-full flex-wrap items-center gap-x-3.5 gap-y-1"><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3a"></span><span class="text-xs text-muted">Assigned to arrived goods</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3b"></span><span class="text-xs text-muted">Still awaited</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-3c"></span><span class="text-xs text-muted">Cancelled</span></span></div><div class="relative w-full" style="height:150px"><span class="absolute h-px bg-chart-grid" style="left:48px;width:270px;top:0px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:44px;top:-8px">14 000</span><span class="absolute h-px bg-chart-grid" style="left:48px;width:270px;top:60px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:44px;top:52px">7 000</span><span class="absolute h-px bg-chart-grid" style="left:48px;width:270px;top:120px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:44px;top:112px">0</span><span class="absolute bg-chart-3a" style="left:52px;top:59px;width:14px;height:59px" title="W28 Assigned 7 150"></span><span class="absolute bg-chart-3b" style="left:52px;top:49px;width:14px;height:8px" title="W28 Still awaited 1 130"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:52px;top:44px;width:14px;height:5px" title="W28 Cancelled 620"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:42px;width:34px;top:128px">W28</span><span class="absolute bg-chart-3a" style="left:75px;top:55px;width:14px;height:63px" title="W29 Assigned 7 600"></span><span class="absolute bg-chart-3b" style="left:75px;top:44px;width:14px;height:9px" title="W29 Still awaited 1 320"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:75px;top:39px;width:14px;height:4px" title="W29 Cancelled 480"></span><span class="absolute bg-chart-3a" style="left:97px;top:68px;width:14px;height:50px" title="W30 Assigned 6 100"></span><span class="absolute bg-chart-3b" style="left:97px;top:61px;width:14px;height:5px" title="W30 Still awaited 790"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:97px;top:53px;width:14px;height:8px" title="W30 Cancelled 910"></span><span class="absolute bg-chart-3a" style="left:120px;top:52px;width:14px;height:66px" title="W31 Assigned 7 900"></span><span class="absolute bg-chart-3b" style="left:120px;top:37px;width:14px;height:13px" title="W31 Still awaited 1 760"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:120px;top:33px;width:14px;height:5px" title="W31 Cancelled 540"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:110px;width:34px;top:128px">W31</span><span class="absolute bg-chart-3a" style="left:142px;top:62px;width:14px;height:56px" title="W32 Assigned 6 800"></span><span class="absolute bg-chart-3b" style="left:142px;top:52px;width:14px;height:8px" title="W32 Still awaited 1 180"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:142px;top:42px;width:14px;height:10px" title="W32 Cancelled 1 120"></span><span class="absolute bg-chart-3a" style="left:165px;top:51px;width:14px;height:67px" title="W33 Assigned 8 050"></span><span class="absolute bg-chart-3b" style="left:165px;top:29px;width:14px;height:20px" title="W33 Still awaited 2 620"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:165px;top:22px;width:14px;height:6px" title="W33 Cancelled 730"></span><span class="absolute bg-chart-3a" style="left:187px;top:61px;width:14px;height:57px" title="W34 Assigned 6 900"></span><span class="absolute bg-chart-3b" style="left:187px;top:37px;width:14px;height:22px" title="W34 Still awaited 2 840"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:187px;top:29px;width:14px;height:7px" title="W34 Cancelled 860"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:177px;width:34px;top:128px">W34</span><span class="absolute bg-chart-3a" style="left:210px;top:58px;width:14px;height:60px" title="W35 Assigned 7 200"></span><span class="absolute bg-chart-3b" style="left:210px;top:28px;width:14px;height:29px" title="W35 Still awaited 3 560"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:210px;top:16px;width:14px;height:11px" title="W35 Cancelled 1 340"></span><span class="absolute bg-chart-3a" style="left:232px;top:68px;width:14px;height:50px" title="W36 Assigned 6 100"></span><span class="absolute bg-chart-3b" style="left:232px;top:27px;width:14px;height:38px" title="W36 Still awaited 4 710"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:232px;top:19px;width:14px;height:8px" title="W36 Cancelled 990"></span><span class="absolute bg-chart-3a" style="left:255px;top:74px;width:14px;height:44px" title="W37 Assigned 5 400"></span><span class="absolute bg-chart-3b" style="left:255px;top:17px;width:14px;height:54px" title="W37 Still awaited 6 590"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:255px;top:7px;width:14px;height:10px" title="W37 Cancelled 1 210"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:244px;width:34px;top:128px">W37</span><span class="absolute bg-chart-3a" style="left:277px;top:87px;width:14px;height:31px" title="W38 Assigned 3 900"></span><span class="absolute bg-chart-3b" style="left:277px;top:18px;width:14px;height:67px" title="W38 Still awaited 8 020"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:277px;top:11px;width:14px;height:7px" title="W38 Cancelled 780"></span><span class="absolute bg-chart-3a" style="left:300px;top:112px;width:14px;height:6px" title="W39 Assigned 900"></span><span class="absolute bg-chart-3b" style="left:300px;top:68px;width:14px;height:42px" title="W39 Still awaited 5 160"></span><span class="absolute bg-chart-3c rounded-t-[3px]" style="left:300px;top:66px;width:14px;height:2px" title="W39 Cancelled 240"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:284px;width:34px;top:128px">W39</span></div><p class="text-xs leading-normal text-muted">Weeks report what their Customer Orders currently ask for · W39 in progress · Pooled across the Workspace&#x27;s Warehouses, none named</p></article><article class="flex min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><h2 class="text-sm font-semibold text-foreground">Purchasing Spread</h2><p class="text-xs text-muted">Drafts in every state · Ready = Ready for ordering</p><div class="flex flex-col gap-1"><div class="flex items-center gap-1 text-xs font-medium text-muted"><span class="text-center" style="width:76.5px">Draft</span><span class="text-center" style="width:76.5px">Ready</span><span class="text-center" style="width:76.5px">Closed</span><span class="text-center" style="width:76.5px">Discarded</span></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">Central DC</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">40</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">41</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4a text-xs font-semibold tabular-nums text-accent-foreground" style="width:76.5px">186</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">12</span></div></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">North Hub</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">18</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">22</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4a text-xs font-semibold tabular-nums text-accent-foreground" style="width:76.5px">140</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">9</span></div></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">Riverside</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">26</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">9</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4b text-xs font-semibold tabular-nums text-accent-foreground" style="width:76.5px">64</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">38</span></div></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">Eastgate</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">11</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">14</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4b text-xs font-semibold tabular-nums text-accent-foreground" style="width:76.5px">97</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">6</span></div></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">Southport</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">31</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">7</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">41</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">29</span></div></div><div class="flex flex-col gap-1"><span class="text-xs font-medium text-foreground">Lakeview</span><div class="flex items-center gap-1"><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">6</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">5</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4c text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">22</span><span class="flex h-[30px] items-center justify-center rounded-md bg-chart-4d text-xs font-semibold tabular-nums text-foreground" style="width:76.5px">2</span></div></div></div><div class="flex flex-wrap items-center gap-x-2.5 gap-y-1"><span class="text-xs text-muted">Drafts</span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4d"></span><span class="text-xs text-muted">1–19</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4c"></span><span class="text-xs text-muted">20–49</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4b"></span><span class="text-xs text-muted">50–99</span></span><span class="flex items-center gap-1.5"><span class="size-2 rounded-[2px] bg-chart-4a"></span><span class="text-xs text-muted">100 +</span></span></div></article><article class="flex min-w-0 flex-1 flex-col gap-2 rounded-3xl bg-surface p-4 shadow-surface"><h2 class="text-sm font-semibold text-foreground">Receipt Reliability</h2><p class="text-xs text-muted">Mark size = quantity received</p><p class="text-xs font-medium text-muted">↑ Conformance rate  On-time arrival rate →</p><div class="relative w-full" style="height:236px"><span class="absolute h-px bg-chart-grid" style="left:40px;width:278px;top:208px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:32px;top:200px">0%</span><span class="absolute w-px bg-chart-grid" style="left:40px;top:8px;height:200px"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:22px;width:36px;top:214px">0%</span><span class="absolute h-px bg-chart-grid" style="left:40px;width:278px;top:108px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:32px;top:100px">50%</span><span class="absolute w-px bg-chart-grid" style="left:179px;top:8px;height:200px"></span><span class="absolute text-center text-xs leading-4 text-muted" style="left:161px;width:36px;top:214px">50%</span><span class="absolute h-px bg-chart-grid" style="left:40px;width:278px;top:8px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:0;width:32px;top:0px">100%</span><span class="absolute w-px bg-chart-grid" style="left:318px;top:8px;height:200px"></span><span class="absolute text-right text-xs leading-4 text-muted" style="left:282px;width:36px;top:214px">100%</span><span class="absolute rounded-full border-2 border-[var(--surface)] bg-chart-3b" style="left:245px;top:14px;width:24px;height:24px" title="Central DC: on-time 78%, conformance 91%"></span><span class="absolute text-center text-xs font-medium leading-4 text-foreground" style="left:145px;width:76px;top:19px">Central DC</span><span class="absolute rounded-full border-2 border-[var(--surface)] bg-chart-3b" style="left:192px;top:27px;width:18px;height:18px" title="North Hub: on-time 58%, conformance 86%"></span><span class="absolute text-center text-xs font-medium leading-4 text-foreground" style="left:163px;width:76px;top:48px">North Hub</span><span class="absolute rounded-full border-2 border-[var(--surface)] bg-chart-3b" style="left:144px;top:74px;width:21px;height:21px" title="Riverside: on-time 41%, conformance 62%"></span><span class="absolute text-center text-xs font-medium leading-4 text-foreground" style="left:116px;width:76px;top:97px">Riverside</span><span class="absolute rounded-full border-2 border-[var(--surface)] bg-chart-3b" style="left:284px;top:9px;width:13px;height:13px" title="Eastgate: on-time 90%, conformance 96%"></span><span class="absolute text-center text-xs font-medium leading-4 text-foreground" style="left:242px;width:76px;top:26px">Eastgate</span><span class="absolute rounded-full border-2 border-[var(--surface)] bg-chart-3b" style="left:208px;top:110px;width:15px;height:15px" title="Southport: on-time 63%, conformance 45%"></span><span class="absolute text-center text-xs font-medium leading-4 text-foreground" style="left:177px;width:76px;top:129px">Southport</span></div><p class="text-xs leading-normal text-muted">Lakeview has no rate to report · Excluded: 214 undated lines (18%), 386 with no conformance recorded (32%), 71 not applicable (6%) · Whole retained record</p></article></div><footer class="h-[33px] w-full shrink-0 border-t border-border bg-surface"></footer></div>
+    </main>
+  </body>
+</html>

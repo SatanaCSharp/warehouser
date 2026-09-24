@@ -1,0 +1,130 @@
+{
+  "panelError": {
+    "title": "Figures unavailable",
+    "meta": "This panel could not be read",
+    "body": "Something went wrong reading this panel. Reloading the page usually resolves it."
+  },
+  "panels": {
+    "coverageGap": {
+      "title": "Coverage Gap",
+      "meta": "Top 10 Items by uncovered quantity",
+      "remainder": "{{count}} more Items",
+      "series": {
+        "onHand": "On hand",
+        "onOrder": "On order",
+        "uncovered": "Uncovered"
+      },
+      "columns": {
+        "item": "Item",
+        "coverage": "Coverage",
+        "onHand": "On hand",
+        "onOrder": "On order",
+        "uncovered": "Uncovered",
+        "total": "Total"
+      }
+    },
+    "reasonConcentration": {
+      "title": "Reason Concentration",
+      "meta": "Rejected quantity by Reason",
+      "cumulative": "{{share}}%",
+      "remainder": "{{count}} more Reasons",
+      "columns": {
+        "reason": "Reason",
+        "refused": "Refused",
+        "undecided": "Undecided",
+        "byCustomer": "By customer",
+        "cumulative": "Cum."
+      }
+    },
+    "arrivalTiming": {
+      "title": "Arrival Timing",
+      "meta": "Quantity owed vs expected at the dock, by week",
+      "overdue": "Overdue",
+      "footnote": "Beyond the last week: {{beyondQuantity}} owed, {{beyondOrders}} orders, in no week · Not placed in a week: {{undatedDrafts}} undated drafts, {{datedStillInDraft}} still in Draft, {{sinceClosedOrDiscarded}} since Closed or Discarded",
+      "series": {
+        "owed": "Owed",
+        "expectedAtDock": "Expected at dock"
+      }
+    },
+    "purchasingPipeline": {
+      "title": "Purchasing Pipeline",
+      "meta": "Open drafts by state and age",
+      "footnote": "Counts drafts, not quantities · Closed and Discarded drafts are not counted",
+      "bands": {
+        "upTo7Days": "≤ 7 days",
+        "from8To14Days": "8–14 days",
+        "from15To30Days": "15–30 days",
+        "over30Days": "> 30 days"
+      },
+      "states": {
+        "draft": "Draft",
+        "readyForOrdering": "Ready for ordering"
+      }
+    },
+    "demandPressure": {
+      "title": "Demand Pressure",
+      "meta": "Outstanding quantity by Warehouse and urgency",
+      "bands": {
+        "overdue": "Overdue",
+        "dueSoon": "Due soon",
+        "later": "Later"
+      },
+      "columns": {
+        "warehouse": "Warehouse",
+        "pressure": "Outstanding by urgency",
+        "outstanding": "Outstanding"
+      },
+      "footnote": "{{count}} archived Warehouses excluded"
+    },
+    "orderFlow": {
+      "title": "Order Flow",
+      "meta": "Recorded quantity by week, pooled across the workspace",
+      "series": {
+        "assigned": "Assigned to arrived goods",
+        "stillAwaited": "Still awaited",
+        "cancelled": "Cancelled"
+      },
+      "footnote": "Weeks report what the Customer Orders recorded in them currently ask for, not what they asked for when they were recorded."
+    },
+    "purchasingSpread": {
+      "title": "Purchasing Spread",
+      "meta": "Purchase drafts by Warehouse and state · Ready = Ready for ordering",
+      "states": {
+        "draft": "Draft",
+        "readyForOrdering": "Ready",
+        "closed": "Closed",
+        "discarded": "Discarded"
+      },
+      "legend": {
+        "zero": "0",
+        "lowBand": "1–19",
+        "midBand": "20–49",
+        "highBand": "50–99",
+        "topBand": "100+"
+      },
+      "footnote": "{{count}} archived Warehouses excluded"
+    },
+    "receiptReliability": {
+      "title": "Receipt Reliability",
+      "meta": "On-time arrival against conformance, by Warehouse",
+      "footnote": {
+        "archivedExcluded": "{{count}} archived Warehouses excluded.",
+        "noRateWarehouse": "{{name}} has no rate to report ({{undated}} undated · {{noEnding}} no ending recorded · {{nothingReceived}} nothing received · {{directToCustomer}} sent direct to customer · {{unrecordedConformance}} conformance not recorded · {{notApplicable}} not applicable)."
+      }
+    }
+  },
+  "warehouse": {
+    "heading": "Warehouse dashboard",
+    "denial": {
+      "heading": "You cannot read this warehouse’s figures",
+      "description": "Your role in this warehouse does not admit them. Ask a warehouse administrator if you need them."
+    }
+  },
+  "workspace": {
+    "heading": "Workspace dashboard",
+    "denial": {
+      "heading": "You cannot read this workspace’s figures",
+      "description": "Your role in this workspace does not admit them. Ask a workspace administrator if you need them."
+    }
+  }
+}

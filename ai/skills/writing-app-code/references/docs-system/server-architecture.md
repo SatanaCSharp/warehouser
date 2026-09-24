@@ -141,7 +141,11 @@ specifiers unchanged and `tsc-alias` performs both rewrites — `paths` alias to
 `resolveFullPaths` to the extension — which is what makes `dist/` loadable. The Nest CLI is
 deliberately not a dependency: its `paths` transformer strips the extension off every specifier it
 rewrites, producing output Node cannot load (nest-cli#3545). `pnpm dev` runs the TypeScript
-entrypoint directly with `tsx watch`.
+entrypoint directly with `node --watch --import @swc-node/register/esm-register`. The loader has to
+be SWC rather than esbuild: esbuild cannot emit `design:paramtypes`
+(https://esbuild.github.io/content-types/#typescript-caveats), so under `tsx` every Nest constructor
+injection resolves to `undefined` and the container refuses to start. It is the same reason
+`vitest.shared.ts` replaces Vite's esbuild transform with `unplugin-swc`.
 
 ## Layer responsibilities
 

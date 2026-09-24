@@ -26,6 +26,7 @@ import type { ReactElement } from 'react';
 import { useState } from 'react';
 import { Provider } from 'react-redux';
 import { ROUTE_SEGMENTS, ROUTES } from 'shared/constants/routes';
+import { useCurrentWorkspaceContext } from 'shared/hooks/queries/useWorkspacePermissions';
 import { Sidebar } from 'shared/layouts/sidebar/Sidebar';
 import type { AppStore } from 'store';
 import { makeStore } from 'store';
@@ -118,6 +119,24 @@ const SidebarWithToggle = (): ReactElement => {
   );
 };
 
+/**
+ * The rail beside a marker that appears only once the Workspace context read
+ * has settled. A case asserting the rail is ABSENT needs it: `queryBy…` is
+ * satisfied at the first paint, when nothing has resolved and nothing would be
+ * rendered by any implementation, so the assertion would pass against a build
+ * that renders the empty rail the moment the read lands.
+ */
+const SidebarAfterWorkspaceContext = (): ReactElement => {
+  const { workspaceContext } = useCurrentWorkspaceContext();
+
+  return (
+    <>
+      {workspaceContext ? <p>workspace context resolved</p> : null}
+      <Sidebar />
+    </>
+  );
+};
+
 type RenderOptions = {
   component?: () => ReactElement | null;
   entry?: string;
@@ -147,6 +166,16 @@ const renderSidebar = ({
   const workspaceRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: ROUTES.WORKSPACE,
+    component: () => null,
+  });
+  // dashboards T19 — a FLAT root sibling of the administration route, matching
+  // the production declaration: the Workspace Dashboard parents on the root so
+  // it inherits no capability guard (AC-15). Declaring it as a child of
+  // `workspaceRoute` here would make the `/workspace` match do the context's
+  // work and hide the defect these cases pin.
+  const workspaceDashboardRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE_DASHBOARD,
     component: () => null,
   });
   const verdictsByStatus: Record<
@@ -185,6 +214,7 @@ const renderSidebar = ({
     routeTree: rootRoute.addChildren([
       homeRoute,
       workspaceRoute,
+      workspaceDashboardRoute,
       warehouseTestRoute.addChildren([warehouseIndexRoute, accessRoute]),
     ]),
     context: { store },
@@ -266,6 +296,25 @@ describe('Sidebar in a Warehouse view (CR-AC-11)', () => {
       screen.queryByRole('link', { name: 'Workspace' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+  });
+
+  // The presence rule is "no entry, no list", and the Warehouse rail must be
+  // untouched by it: AC-02 makes a member admitting no Panel a DENIAL rendered
+  // at the Dashboard, not an absent entry, so that entry is ungated and this
+  // rail always has one. Asserted for an actor holding no Warehouse Permission
+  // at all — the case that would lose its rail if the rule were applied by
+  // counting gates rather than entries.
+  it('keeps the rail and its collapse control for an actor holding no Warehouse Permission', async () => {
+    stubAccess({ ...baseAccess, permissionIds: [] });
+    renderSidebar();
+
+    expect(
+      await screen.findByRole('link', { name: 'Dashboard' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Collapse navigation' }),
+    ).toBeInTheDocument();
   });
 
   it('renders an icon for each nav item', async () => {
@@ -621,14 +670,17 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
     ['WORKSPACE_ROLES:WATCH', WorkspacePermissionId.WORKSPACE_ROLES_WATCH],
     ['WORKSPACE_MEMBERS:WATCH', WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH],
     ['WORKSPACE:RENAME', WorkspacePermissionId.WORKSPACE_RENAME],
-  ])('shows Workspace when the actor holds %s', async (_label, permission) => {
-    stubAccessAndWorkspace(namedWorkspaceContext([permission]));
-    renderSidebar({ entry: ROUTES.WORKSPACE });
+  ])(
+    'shows Administration when the actor holds %s',
+    async (_label, permission) => {
+      stubAccessAndWorkspace(namedWorkspaceContext([permission]));
+      renderSidebar({ entry: ROUTES.WORKSPACE });
 
-    expect(
-      await screen.findByRole('link', { name: 'Workspace' }),
-    ).toHaveAttribute('href', ROUTES.WORKSPACE);
-  });
+      expect(
+        await screen.findByRole('link', { name: 'Administration' }),
+      ).toHaveAttribute('href', ROUTES.WORKSPACE);
+    },
+  );
 
   // CR-AC-12 — "no Warehouse-scoped destination appears in it".
   it('shows no Warehouse-scoped destination', async () => {
@@ -637,7 +689,7 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
     );
     renderSidebar({ entry: ROUTES.WORKSPACE });
 
-    await screen.findByRole('link', { name: 'Workspace' });
+    await screen.findByRole('link', { name: 'Administration' });
     expect(
       screen.queryByRole('link', { name: 'Dashboard' }),
     ).not.toBeInTheDocument();
@@ -656,13 +708,28 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument(),
     );
     expect(
-      screen.queryByRole('button', { name: 'Workspace' }),
+      screen.queryByRole('button', { name: 'Administration' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Administration')).not.toBeInTheDocument();
+  });
+
+  // CR-AC-18 — the same rule as the Dashboard address, at the address whose own
+  // guard normally keeps this actor away: no entry means no landmark. The
+  // criterion is about the LIST, not about which address it was withheld at.
+  it('renders no landmark either when the Workspace view offers no entry', async () => {
+    stubAccessAndWorkspace(namedWorkspaceContext([]));
+    renderSidebar({
+      component: SidebarAfterWorkspaceContext,
+      entry: ROUTES.WORKSPACE,
+    });
+
+    await screen.findByText('workspace context resolved');
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('hides Workspace during the loading window without rendering a skeleton', async () => {
@@ -671,10 +738,134 @@ describe('Sidebar in the Workspace view (CR-AC-12)', () => {
 
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument(),
     );
     expect(screen.queryByLabelText(/loading/iu)).not.toBeInTheDocument();
+  });
+});
+
+// dashboards T19 — the Workspace Dashboard reads as a WORKSPACE view, so the
+// shell serves it the Workspace rail. It is a flat root child that matches
+// `/workspace/dashboard` and nothing else, so the context predicate has to name
+// that address too; while it named only `/workspace` the rail, the drawer
+// toggle and the landmark were all withdrawn at this address and there was no
+// way to navigate off the surface at all.
+//
+// `design-handoff.md` § Grid geometry states the shell — "header 80, footer 33,
+// sidebar 240 — all inherited, unchanged" — so the rail is part of the approved
+// design of this destination, not incidental to it.
+describe('Sidebar at the Workspace Dashboard address (dashboards T19, AC-15)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // Every Workspace administration Permission except the observation one, so
+  // the denied actor below is refused the Dashboard alone.
+  const administrationPermissions = [
+    WorkspacePermissionId.WAREHOUSES_WATCH,
+    WorkspacePermissionId.WORKSPACE_ROLES_WATCH,
+    WorkspacePermissionId.WORKSPACE_MEMBERS_WATCH,
+    WorkspacePermissionId.WORKSPACE_RENAME,
+  ];
+
+  it('serves the Workspace rail to a holder of the observation Permission', async () => {
+    stubAccessAndWorkspace(
+      namedWorkspaceContext([
+        WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH,
+        ...administrationPermissions,
+      ]),
+    );
+    renderSidebar({ entry: ROUTES.WORKSPACE_DASHBOARD });
+
+    expect(
+      await screen.findByRole('link', { name: 'Dashboard' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE_DASHBOARD);
+    expect(
+      screen.getByRole('link', { name: 'Administration' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE);
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  // AC-15's other half — the address is reached by a stale link, a bookmark or a
+  // revoked grant, and the denial renders AT it. The gated Dashboard ENTRY stays
+  // gated, but the rail around it must not vanish: without it this actor would
+  // have no navigation off the denial at all.
+  it('still serves the rail to an actor denied the Dashboard, keeping the Administration entry', async () => {
+    stubAccessAndWorkspace(namedWorkspaceContext(administrationPermissions));
+    renderSidebar({ entry: ROUTES.WORKSPACE_DASHBOARD });
+
+    expect(
+      await screen.findByRole('link', { name: 'Administration' }),
+    ).toHaveAttribute('href', ROUTES.WORKSPACE);
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Dashboard' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // dashboards AC-15 / CR-AC-18 — the other actor the flat, unguarded address
+  // admits: one whose Workspace Role carries NO Workspace Permission at all, so
+  // both entries gate away and the entered context offers nothing. The denial
+  // still renders at the address; the rail must not, because a landmark whose
+  // only content is a collapse control over an empty list is 240px of chrome
+  // that navigates nowhere — the same empty shape CR-AC-18 forbids the drawer.
+  it('renders no rail when the entered context offers the actor no entry', async () => {
+    stubAccessAndWorkspace(namedWorkspaceContext([]));
+    renderSidebar({
+      component: SidebarAfterWorkspaceContext,
+      entry: ROUTES.WORKSPACE_DASHBOARD,
+    });
+
+    await screen.findByText('workspace context resolved');
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Collapse navigation' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The loading window, decided deliberately: the Workspace context is fetched,
+  // so until it lands the permission set is unknown and NO entry is offered.
+  // The rail follows the entries, so it is absent for that window and arrives
+  // with the first entry — rather than painting chrome synchronously and
+  // filling it afterwards. The read below never settles, so the rail's absence
+  // is the whole of what this address renders until it does.
+  it('renders no rail while the Workspace context is still in flight', async () => {
+    stubAccessAndWorkspace(null);
+    renderSidebar({ entry: ROUTES.WORKSPACE_DASHBOARD });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Collapse navigation' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/loading/iu)).not.toBeInTheDocument();
+  });
+
+  // CR-AC-12 / CR-AC-06 — `namedWorkspaceContext` names an active Warehouse in
+  // `effectiveWarehouseId`, and the Warehouse rail must still not appear: the
+  // entered Warehouse is the `ROUTES.WAREHOUSE` match's published verdict, never
+  // a stored selection, and no Workspace address matches that route.
+  it('never serves the Warehouse rail, even with a Warehouse selected in the Workspace context', async () => {
+    stubAccessAndWorkspace(
+      namedWorkspaceContext([
+        WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH,
+        ...administrationPermissions,
+      ]),
+    );
+    renderSidebar({ entry: ROUTES.WORKSPACE_DASHBOARD });
+
+    await screen.findByRole('link', { name: 'Administration' });
+    const list = screen.getAllByRole('list')[0];
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Dashboard', 'Administration']);
   });
 });
 
@@ -709,7 +900,7 @@ describe('Sidebar with no entered context (CR-AC-18)', () => {
         screen.queryByRole('link', { name: 'Dashboard' }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('link', { name: 'Workspace' }),
+        screen.queryByRole('link', { name: 'Administration' }),
       ).not.toBeInTheDocument();
     },
   );
@@ -931,9 +1122,13 @@ describe('Sidebar collapse', () => {
       await screen.findByRole('button', { name: 'Collapse navigation' }),
     );
 
-    const workspace = await screen.findByRole('link', { name: 'Workspace' });
+    const workspace = await screen.findByRole('link', {
+      name: 'Administration',
+    });
     expect(workspace).toHaveAttribute('href', ROUTES.WORKSPACE);
-    expect(within(workspace).getByText('Workspace')).toHaveClass('sr-only');
+    expect(within(workspace).getByText('Administration')).toHaveClass(
+      'sr-only',
+    );
   });
 
   it('remembers the collapsed width for the next visit rather than re-expanding', async () => {

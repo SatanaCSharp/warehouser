@@ -1,0 +1,343 @@
+{
+  "slug": "dashboards",
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Promote the Reason Concentration index migration onto the populated rejection relation",
+      "layer": "migration",
+      "deps": [],
+      "acs": ["AC-12"],
+      "dod": "The staged migration is promoted to apps/server/migrations/1786900000000-AddReasonConcentrationIndex.ts unedited, applies and reverts cleanly against a database already holding purchase_draft_line_rejections rows, idx_purchase_draft_line_rejections_warehouse_reason exists on (warehouse_id, rejection_reason_id) after up and is absent after down with every seeded Rejection intact, and no shipped migration file is touched.",
+      "files_hint": [
+        "docs/features/dashboards/migrations/01-add-reason-concentration-index.ts",
+        "apps/server/migrations/"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Promote the Workspace Permission grant migration and add WAREHOUSE_PERFORMANCE:WATCH to the catalogue enum and its hand-enumerated gate",
+      "layer": "migration",
+      "deps": ["T1"],
+      "acs": ["AC-21", "AC-21a"],
+      "dod": "The staged migration is promoted to apps/server/migrations/1786900100000-GrantDashboardPermissions.ts, applies and reverts cleanly, inserts WAREHOUSE_PERFORMANCE:WATCH as kind 'assignable' through queryRunner.manager.insert with entity property names while the NOT EXISTS-guarded grant stays raw snake_case SQL, every workspace_owner Role that existed before the apply carries it afterwards and no custom Role gains it, a re-apply of the grant is a no-op and a revert deletes the grant before the catalogue row; packages/shared-types exports the new WorkspacePermissionId member, MIGRATION_WORKSPACE_PERMISSION_CATALOGUE in workspace-permission-vocabulary.spec.ts lists it, and the package is rebuilt so server tests resolve it through dist.",
+      "files_hint": [
+        "docs/features/dashboards/migrations/02-grant-dashboard-permissions.ts",
+        "apps/server/migrations/",
+        "packages/shared-types/src/enums/workspace-permission-id.ts",
+        "packages/shared-types/src/enums/workspace-permission-vocabulary.spec.ts"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Add the @warehouser/contracts/dashboards subpath with the eight Panel response schemas and both Vite aliases",
+      "layer": "ports",
+      "deps": [],
+      "acs": [
+        "AC-03",
+        "AC-07",
+        "AC-08a",
+        "AC-12",
+        "AC-16",
+        "AC-17a",
+        "AC-20",
+        "AC-20a"
+      ],
+      "dod": "packages/contracts/src/dashboards exports the eight Panel response schemas and the shared bucket and exclusion-count shapes exactly as contracts/openapi.yaml defines them, with every exclusion count a required field of its Panel rather than an optional one; apps/web/vite.config.ts registers BOTH the @warehouser/contracts/dashboards alias and the bare dashboards alias; a contract-parity spec asserts each schema against its openapi.yaml component and fails when one drifts; and pnpm --filter @warehouser/web build succeeds, which is the only gate that sees a missing alias.",
+      "files_hint": [
+        "packages/contracts/src/dashboards/",
+        "packages/contracts/src/index.ts",
+        "packages/contracts/package.json",
+        "apps/web/vite.config.ts"
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "Introduce APP_TIMEZONE as the single bound parameter every week, band and on-time verdict is computed against",
+      "layer": "wiring",
+      "deps": [],
+      "acs": ["AC-07", "AC-10", "AC-14", "AC-16", "AC-20b"],
+      "dod": "apps/server/.env.example carries APP_TIMEZONE=UTC with no existing local environment file read or overwritten, the value is read through ConfigService exactly as LOG_LEVEL is, it is validated as an IANA zone name at startup, and it is exposed to the repository layer as a bound query parameter rather than a connection TimeZone setting; a unit test proves an invalid zone fails startup and an integration test proves the same instant buckets into different weeks under two different values.",
+      "files_hint": [
+        "apps/server/.env.example",
+        "apps/server/src/shared/config/",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Add WarehouseDemandCoverageRepository with the Coverage Gap statement: four independently grouped CTEs joined on item_id",
+      "layer": "infra",
+      "deps": ["T4"],
+      "acs": [
+        "AC-03",
+        "AC-04",
+        "AC-05",
+        "AC-06",
+        "AC-06a",
+        "AC-08",
+        "AC-11",
+        "AC-25"
+      ],
+      "dod": "One public method issues one statement whose outstanding, inbound and on-hand aggregates are each grouped in their own CTE and joined afterwards, computing GREATEST(outstanding - on_hand - inbound, 0) ordered by uncovered desc, total outstanding desc, sku asc, keeping ten rows and rolling the remainder into one row with its Item count; integration tests prove an Item with several Unfulfilled Customer Orders AND several open Purchase Draft Lines reports the same quantities as one with one of each (AC-06a), a cancelled order's retained outstanding quantity contributes nothing (AC-04), a deactivated Item is shown unchanged (AC-25), both Delivery Modes count toward inbound (AC-08), a Closed or Discarded draft counts nothing (AC-11), inbound is read from the line's ordered quantity and never from a link's stated quantity (AC-06), and a fully covered Item reports nothing uncovered rather than a negative (AC-05); the class has no private method and imports no feature module.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/warehouse-demand-coverage.repository.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-demand-coverage.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Add the Arrival Timing statement: two never-netted series over nine buckets with four exclusion counts as columns",
+      "layer": "infra",
+      "deps": ["T4", "T5"],
+      "acs": ["AC-07", "AC-08", "AC-08a", "AC-11"],
+      "dod": "A second public method on the same repository issues one statement returning the demand series (Unfulfilled Customer Orders bucketed by needed_by) and the supply series (drafts standing in ready_for_ordering at read time, bucketed by expected_arrival_date, Via Warehouse lines only) over one Overdue bucket plus eight weeks, never netted against one another, with all four exclusions as columns of the same result — demand beyond the eighth week with the Customer Orders it covers, undated Ready drafts, dated drafts still in Draft, and drafts since Closed or Discarded; integration tests prove a Ready draft whose Expected Arrival Date has already passed lands in the first bucket (the tasks-gate ruling of 2026-09-21), a Direct to Customer line reaches no bucket while counting inbound on the Coverage Gap (AC-08), and each exclusion count equals the rows it excludes; spec.md §5 AC-07 is amended to state the late-Ready-draft bucket.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/warehouse-demand-coverage.repository.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-demand-coverage.repository.integration.spec.ts",
+        "docs/features/dashboards/spec.md"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Add the Purchasing Pipeline and Reason Concentration repositories, one statement each",
+      "layer": "infra",
+      "deps": ["T1", "T4"],
+      "acs": ["AC-10", "AC-11", "AC-12"],
+      "dod": "WarehousePurchasingReadRepository counts purchase_drafts — never quantities — grouped by state and by a CASE over an age derived from created_at for a Draft and readied_at for a Ready draft, over state IN ('draft','ready_for_ordering') only; WarehouseRejectionReadRepository sums purchase_draft_line_rejections.quantity by rejection_reason_id with the running share as a window over that order, counting both Rejection Sources, reporting the still-Undecided and the Customer-reported quantities as two independent columns rather than stacked segments, rolling Reasons beyond the tenth into one row with its Reason count and emitting no remainder row when nothing was gathered; integration tests prove a draft readied yesterday after a month in Draft reads as a day old (AC-10), a Closed draft is counted nowhere (AC-11), a Rejection that is both Undecided and Customer-reported is counted once in the bar and once in each column (AC-12), and EXPLAIN shows the new index is used by the Reason read; neither class has a private method or imports a feature module.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/warehouse-purchasing-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-purchasing-read.repository.integration.spec.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-rejection-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/warehouse-rejection-read.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Add WorkspacePerformanceReadRepository with the active-Warehouse scope, Demand Pressure and Purchasing Spread",
+      "layer": "infra",
+      "deps": ["T4"],
+      "acs": ["AC-14", "AC-18"],
+      "dod": "The repository resolves warehouses WHERE workspace_id = $1 AND archived_at IS NULL once and binds it to every read as an explicit uuid[] via warehouse_id = ANY($1::uuid[]) — never a correlated subquery — reporting the archived count as a field of each Panel; Demand Pressure returns outstanding quantity per Warehouse split into Overdue, due soon (the next fourteen days) and due later, as absolute quantities; Purchasing Spread returns draft counts per Warehouse across all four states, the one read that counts Closed and Discarded; integration tests prove an archived Warehouse appears in no row but in every archived count, the Urgency Band boundaries fall where APP_TIMEZONE puts them, and EXPLAIN shows the bound array reaches idx_customer_orders_warehouse_created with both columns in the index condition.",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Add the Order Flow read: twelve pooled weeks keyed on the recording week, with the allocation aggregate in its own CTE",
+      "layer": "infra",
+      "deps": ["T8"],
+      "acs": ["AC-04", "AC-06a", "AC-16", "AC-17", "AC-17a"],
+      "dod": "One statement returns twelve weeks pooled across the Workspace's active Warehouses, naming no Warehouse, bucketed by date_trunc('week', created_at AT TIME ZONE $tz) and counting every Customer Order state including cancelled — the one read that does; each week's whole is the quantity its Customer Orders ask for now, divided into the quantity since assigned to arrived goods (arrival_allocations summed in its own CTE grouped by customer_order_id and joined back) and the cancelled part read from a cancelled order's retained outstanding_quantity; integration tests prove a Customer Order satisfied by three arrivals in three later weeks reports all three against its own recording week and nothing in the arrival weeks (AC-17), a Customer Order with three allocations reports the same recorded quantity as one with none (AC-06a), an order amended upward reports the new quantity in its old week (AC-17a), and a cancelled order contributes to Order Flow's week while contributing to no owed figure anywhere else (AC-04, AC-16).",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Add the Receipt Reliability read: two rates with different denominators, six exclusions, and no rate where no line is admissible",
+      "layer": "infra",
+      "deps": ["T8"],
+      "acs": ["AC-19", "AC-20", "AC-20a", "AC-20b"],
+      "dod": "One statement returns, per active Warehouse over the whole retained record, the On-time Arrival Rate over Via Warehouse lines only judged by (ending_recorded_at AT TIME ZONE $tz)::date <= expected_arrival_date, the Conformance Rate over instructed lines NOT restricted by Delivery Mode, and the quantity received as SUM(ending_quantity) over Via Warehouse lines whose ending recorded something; integration tests prove an undated line, a line with no ending, and an ending that received nothing each enter neither part of the on-time rate (AC-20b), a Direct to Customer line enters neither part of the on-time rate but does enter the Conformance Rate when it carries a verdict, an unrecorded and a not-applicable verdict are excluded from both parts of the Conformance Rate rather than counted as failed (AC-20), each of the five exclusions is a stated count matching the rows it excludes, and a Warehouse admitting no line reports no rate rather than zero or one hundred (AC-20a).",
+      "files_hint": [
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.ts",
+        "apps/server/src/shared/domain/repositories/workspace-performance-read.repository.integration.spec.ts"
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Add the dashboards module's panel-access predicates and the four Warehouse Panel queries",
+      "layer": "app",
+      "deps": ["T3", "T5", "T6", "T7"],
+      "acs": [
+        "AC-02",
+        "AC-03",
+        "AC-07",
+        "AC-08a",
+        "AC-10",
+        "AC-11",
+        "AC-12",
+        "AC-13"
+      ],
+      "dod": "domain/predicates/panel-access.predicates.ts exposes readsCoverageGap and readsArrivalTiming over observedPermissionIds as named predicates, and the four queries in usecases/queries each hold their Panel's own rules and compose their response inline with no named mapper and no service; the two conjunction queries assert their predicate and raise the shared non-enumerating denial BEFORE issuing any read (ADR 0001); unit tests over repository doubles exercise the conjunction on both sides of every member of each set, prove each state predicate, and prove every exclusion count is carried through from the repository rather than derived in the query; one *Query class per file, every branch a named predicate, and pnpm --filter @warehouser/server test:architectural stays green.",
+      "files_hint": [
+        "apps/server/src/dashboards/domain/",
+        "apps/server/src/dashboards/usecases/queries/read-coverage-gap.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-arrival-timing.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-purchasing-pipeline.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-reason-concentration.query.ts",
+        "apps/server/src/dashboards/usecases/usecase.module.ts"
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Add the Warehouse Dashboard REST surface: four archived-tolerant GETs behind SessionAuthGuard and WarehouseAccessGuard",
+      "layer": "ports",
+      "deps": ["T11"],
+      "acs": ["AC-01", "AC-02", "AC-13", "AC-23", "AC-24"],
+      "dod": "warehouse-dashboard.controller.ts serves the four api/v1/warehouses/:warehouseId/dashboard/* GETs, each declaring its @RequiredPermission, each conjunction Panel additionally declaring the @ObservedPermission set its query asserts, and every handler declaring @ArchivedTolerantRead() from shared/access/; DTOs are createZodDto adapters over the contracts subpath and no request body exists; the module is registered in app.module.ts through DashboardsRestModule and DashboardsUsecaseModule; HTTP contract tests prove each endpoint denies without its required Permission with the shared non-enumerating error, denies a Warehouse the actor is not acting in even while holding the Permission elsewhere (AC-24), succeeds over an archived Warehouse WITH the decorator and denies without it (AC-23), returns the documented response on both sides of each observed Permission (AC-02, AC-13), and that no response carries customer_id, customer_delivery_address_id, customer_name or frozen_customer_name.",
+      "files_hint": [
+        "apps/server/src/dashboards/rest/controllers/warehouse-dashboard.controller.ts",
+        "apps/server/src/dashboards/rest/dtos/",
+        "apps/server/src/dashboards/rest/rest.module.ts",
+        "apps/server/src/dashboards/index.ts",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Add the four Workspace Panel queries over the resolved active-Warehouse scope",
+      "layer": "app",
+      "deps": ["T3", "T8", "T9", "T10"],
+      "acs": ["AC-14", "AC-16", "AC-18", "AC-19", "AC-20a"],
+      "dod": "The four queries in usecases/queries each take the Workspace resolved from the request access and never an identifier from the request, hand the repository one persistence-shaped request, and compose their response inline including the archived-Warehouse count and, for Receipt Reliability, the no-rate Warehouses reported as having no rate rather than as a number; unit tests over repository doubles prove Order Flow names no Warehouse, Purchasing Spread is the one query admitting Closed and Discarded drafts, and a Warehouse with no admissible line reaches the response as no-rate; one *Query class per file and the architectural tier stays green.",
+      "files_hint": [
+        "apps/server/src/dashboards/usecases/queries/read-demand-pressure.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-order-flow.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-purchasing-spread.query.ts",
+        "apps/server/src/dashboards/usecases/queries/read-receipt-reliability.query.ts",
+        "apps/server/src/dashboards/usecases/usecase.module.ts"
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Add the Workspace Dashboard REST surface: four session-scoped GETs behind the new Workspace Permission",
+      "layer": "ports",
+      "deps": ["T2", "T13"],
+      "acs": ["AC-15", "AC-22"],
+      "dod": "workspace-dashboard.controller.ts serves the four api/v1/workspace/dashboard/* GETs behind SessionAuthGuard and WorkspaceAccessGuard requiring WAREHOUSE_PERFORMANCE:WATCH, no route names or accepts a Workspace identifier in any position, and the Permission appears in no other handler's metadata anywhere in the tree; DTOs are createZodDto adapters over the contracts subpath; HTTP contract tests prove a Workspace Member without the Permission is denied with a body carrying no Warehouse name, quantity, count or share and nothing about how many Warehouses the Workspace holds (AC-15), a Workspace Member holding it and holding no Warehouse membership is admitted, and a Warehouse Member holding every watch Permission and no Workspace Role is denied (AC-22).",
+      "files_hint": [
+        "apps/server/src/dashboards/rest/controllers/workspace-dashboard.controller.ts",
+        "apps/server/src/dashboards/rest/dtos/",
+        "apps/server/src/dashboards/rest/rest.module.ts",
+        "apps/server/src/dashboards/index.ts",
+        "apps/server/src/app.module.ts"
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Add the chart primitives, the ten chart tokens, the scale helpers and the dashboard locale namespaces",
+      "layer": "ui",
+      "deps": [],
+      "acs": ["AC-01"],
+      "dod": "shared/utils/chart-scale.ts exposes linearScale and bucketOffset as pure functions with direct unit tests; shared/components/charts/ holds PanelCard, ChartLegend, StackedBarRow, ColumnPlot, HeatGrid, BubblePlot and PanelFootnote, each a positioned box, ellipse or 1px hairline over those scales with NO charting dependency added to apps/web (ADR 0002, Accepted) and no tooltip (the 2026-09-21 tasks-gate ruling); PanelCard is HeroUI Card + Card.Header + Card.Content with the contract's padding, radius and shadows unrestyled; the ten --chart-* variables are added to styles/global.css in both themes exactly as design-handoff.md § Tokens states, and list rows flex 20-26px with the Panel scrolling internally below that while the surface does not; public/locales/{en,uk}/dashboard.json exist and the locale-key-uniqueness and baseline gates pass; component tests prove every series is readable with colour removed.",
+      "files_hint": [
+        "apps/web/src/shared/components/charts/",
+        "apps/web/src/shared/utils/chart-scale.ts",
+        "apps/web/src/styles/global.css",
+        "apps/web/public/locales/en/dashboard.json",
+        "apps/web/public/locales/uk/dashboard.json"
+      ]
+    },
+    {
+      "id": "T16",
+      "title": "Replace the Warehouse placeholder page with the Dashboard shell: loader, grid, reflow, denial and archived strip",
+      "layer": "ui",
+      "deps": ["T3", "T12", "T15"],
+      "acs": ["AC-01", "AC-02", "AC-02a", "AC-09", "AC-13", "AC-23", "AC-26"],
+      "dod": "modules/warehouse/page.tsx renders the Dashboard in place of DesignSystemExample with no masthead, heading, lede or chip row and a visually-hidden h1; warehouse-dashboard.loader.ts returns immediately without issuing anything unless admitsReads(context), awaits accessPermissionsApi.getCurrentAccess, and dispatches ONLY the Panel reads whose whole Permission set the projection reports, each awaited so the page mounts with every permitted figure present; the RTK Query endpoints in api/ refetch on entry rather than by tag invalidation (AC-26); the grid reflows row-major in the fixed Coverage Gap → Reason Concentration → Arrival Timing → Purchasing Pipeline order with a lone Panel spanning both columns and nothing marking an absence; a member admitting no Panel gets the shipped denial pattern naming no Panel and no Permission; an archived Warehouse adds the ArchivedWarehouseChip strip and changes no Permission term; route tests prove exactly the permitted reads are dispatched at one, three and four Panels, nothing is issued on a refused verdict, and no read is issued after paint; the shipped WarehouseEntryRefusal and landing.guard.ts suites stay green, which is how AC-09 continues to hold by inheritance.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/page.tsx",
+        "apps/web/src/modules/warehouse/loaders/warehouse-dashboard.loader.ts",
+        "apps/web/src/modules/warehouse/api/warehouse-dashboard-api.ts",
+        "apps/web/src/modules/warehouse/components/dashboard/WarehouseDashboardGrid.tsx"
+      ]
+    },
+    {
+      "id": "T17",
+      "title": "Draw the Coverage Gap and Reason Concentration Panels as accessible tables with stacked bars",
+      "layer": "ui",
+      "deps": ["T16"],
+      "acs": ["AC-03", "AC-05", "AC-12", "AC-25"],
+      "dod": "Both Panels render from a fixed projection as real tables with a header row and an h2, at the column widths, row heights and gaps in design-handoff.md § Panel specifications; Coverage Gap draws at most ten Items plus the muted Remainder Row stating its Item count, segments dark-to-light On hand → On order → Uncovered with a 2px surface gap, prints the Uncovered figure on every row, and draws no third segment for a fully covered Item; Reason Concentration is NOT a Pareto chart — Undecided and By-customer are numeric columns rather than sub-segments, the running share is a numeric column, and no Remainder Row is drawn while nothing has been gathered; component tests cover the empty Panel drawing its frame, legend and axis with no marks, truncation at the stated character widths, tabular-nums on every figure column, and both mobile row treatments.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/components/dashboard/CoverageGapPanel.tsx",
+        "apps/web/src/modules/warehouse/components/dashboard/ReasonConcentrationPanel.tsx"
+      ]
+    },
+    {
+      "id": "T18",
+      "title": "Draw the Arrival Timing and Purchasing Pipeline Panels with every exclusion count in their footnotes",
+      "layer": "ui",
+      "deps": ["T16"],
+      "acs": ["AC-07", "AC-08a", "AC-10", "AC-11"],
+      "dod": "Arrival Timing draws grouped, never-netted columns over one Overdue bucket and eight weeks at the stated widths with three gridlines, ramp-3b for owed and chart/supply for expected at the dock, and one footnote line carrying all four exclusion counts; Purchasing Pipeline draws two horizontal stacked bars split by the four Age Bands on a shared scale, printing every segment's count with the ink chosen by fill luminance, and a footnote stating that Closed and Discarded drafts are not counted; both carry an h2 and an accessible summary naming what they plot and the counts they exclude; component tests cover each exclusion footnote rendering from its projection field, the mobile bare-week-number labels, and that removing colour loses no figure.",
+      "files_hint": [
+        "apps/web/src/modules/warehouse/components/dashboard/ArrivalTimingPanel.tsx",
+        "apps/web/src/modules/warehouse/components/dashboard/PurchasingPipelinePanel.tsx"
+      ]
+    },
+    {
+      "id": "T19",
+      "title": "Add the modules/workspace-dashboard flat module, its gated rail entry and the Administration relabel",
+      "layer": "ui",
+      "deps": ["T3", "T14", "T15"],
+      "acs": ["AC-14", "AC-15", "AC-22", "AC-26"],
+      "dod": "A new flat module owns ROUTES.WORKSPACE_DASHBOARD at /workspace/dashboard as a root child beside /workspace, its route.tsx declaring requireAuth ONLY and no capability redirect, because the denial is required at the address rather than away from it; the loader reads the Workspace Permission projection and dispatches nothing when WAREHOUSE_PERFORMANCE:WATCH is absent, the page then rendering the shipped denial pattern that names no Warehouse, quantity, count or share; the four endpoints refetch on entry; WorkspaceNavEntries gains the gated Dashboard entry first in the rail and the existing entry is relabelled through a new nav.administration key in common, with /workspace still the administration destination; route tests prove the denial renders at the address rather than redirecting and that the rail entry is absent without the Permission.",
+      "files_hint": [
+        "apps/web/src/modules/workspace-dashboard/",
+        "apps/web/src/shared/constants/routes.ts",
+        "apps/web/src/shared/layouts/sidebar/components/WorkspaceNavEntries.tsx",
+        "apps/web/public/locales/en/common.json",
+        "apps/web/public/locales/uk/common.json"
+      ]
+    },
+    {
+      "id": "T20",
+      "title": "Draw the Demand Pressure and Purchasing Spread Panels",
+      "layer": "ui",
+      "deps": ["T19"],
+      "acs": ["AC-14", "AC-18"],
+      "dod": "Demand Pressure draws one horizontal bar per active Warehouse with three ordinal Urgency Band segments on a scale of QUANTITIES rather than shares, so a small Warehouse in trouble is not flattened, at the stated column widths, with a footnote stating the archived-Warehouse count; Purchasing Spread draws a Warehouse × state heat grid over all four states with the sequential bins 1-19 / 20-49 / 50-99 / 100+ plus a chart/track zero cell, the count printed in EVERY cell so the fill is never the only encoding, a scale legend below, the column head reading Ready and the Panel meta expanding it; both are tables with an h2; component tests cover the mobile treatments, the one-Warehouse case rendering unchanged and saying nothing about it, and that removing colour loses no figure.",
+      "files_hint": [
+        "apps/web/src/modules/workspace-dashboard/components/DemandPressurePanel.tsx",
+        "apps/web/src/modules/workspace-dashboard/components/PurchasingSpreadPanel.tsx"
+      ]
+    },
+    {
+      "id": "T21",
+      "title": "Draw the Order Flow and Receipt Reliability Panels with their disclosure and exclusion footnotes",
+      "layer": "ui",
+      "deps": ["T19"],
+      "acs": ["AC-16", "AC-17a", "AC-19", "AC-20", "AC-20a"],
+      "dod": "Order Flow draws twelve stacked columns pooled across the Workspace naming no Warehouse, each week divided bottom-up into Assigned to arrived goods → Still awaited → Cancelled so the cancelled part reads as withdrawn from the week, with a footnote disclosing that weeks report what their Customer Orders currently ask for (AC-17a); Receipt Reliability draws a bubble scatter with x = On-time Arrival Rate, y = Conformance Rate and area ∝ quantity received at r = 16 × √(received ÷ max received) with a 2px surface ring, direct-labels every mark with its Warehouse name and moves the label aside on collision, plots no Warehouse that has no rate and names those in the footnote beside every exclusion count; both carry an h2 and an accessible summary; component tests cover a week whose whole is entirely cancelled, a Workspace where every Warehouse has no rate, and the mobile plot sizes.",
+      "files_hint": [
+        "apps/web/src/modules/workspace-dashboard/components/OrderFlowPanel.tsx",
+        "apps/web/src/modules/workspace-dashboard/components/ReceiptReliabilityPanel.tsx"
+      ]
+    },
+    {
+      "id": "T22",
+      "title": "Extend the four hand-enumerated structural gates that would otherwise skip this feature silently",
+      "layer": "tests",
+      "deps": ["T12", "T14", "T16", "T19"],
+      "acs": ["AC-02", "AC-13", "AC-15", "AC-24"],
+      "dod": "apps/server/src/dashboards/module-boundaries.spec.ts is created, since that spec is one file per module and none exists for a module that does not have one; apps/web/src/test/loader-permission-parity/ lists both new loaders in LOADER_FILES and PARITY_ROWS with a named constant per loader path; apps/web/src/test/module-boundaries/ lists modules/workspace-dashboard in MODULE_MANIFEST and MODULE_SURFACE; apps/web/src/test/route-readiness/ lists ROUTES.WORKSPACE_DASHBOARD; each extension is proven to bite by a deliberate temporary violation that makes it fail, so the gate is demonstrated rather than assumed; the full gate command set in sad.md §10 runs green, pnpm --filter @warehouser/web build included.",
+      "files_hint": [
+        "apps/server/src/dashboards/module-boundaries.spec.ts",
+        "apps/web/src/test/loader-permission-parity/",
+        "apps/web/src/test/module-boundaries/",
+        "apps/web/src/test/route-readiness/",
+        "apps/web/src/test/readiness-removal/"
+      ]
+    },
+    {
+      "id": "T23",
+      "title": "Amend the four upstream rules this feature's surfaces rest on",
+      "layer": "docs",
+      "deps": [],
+      "acs": ["AC-03", "AC-06", "AC-08", "AC-22"],
+      "dod": "ordering's spec records that a per-Item derived read may state the arithmetic between promised, held and ordered quantity, and that its §3 cross-Workspace exclusion does not forbid an aggregate read authorized at the Workspace level; ordering and delivery-addresses record that the Expected Arrival Date speaks for its draft's Via Warehouse lines only and that a line's recorded ending is taken as its arrival; workspaces records that a Workspace Permission may authorize a read of aggregates over Warehouse-owned records while still authorizing no operation inside a Warehouse; arrival-inspection records the same exception to its no-crossing rule; dashboards' spec.md §6 row-bounding target is amended to the ruled rule (list rows flex 20-26px, then the Panel scrolls internally while the surface does not); every amendment cites this feature and the Security Lead has reviewed the three that travel together, because all three must move or the Workspace surface rests on one amendment and two contradictions.",
+      "files_hint": [
+        "docs/features/ordering/spec.md",
+        "docs/features/delivery-addresses/spec.md",
+        "docs/features/workspaces/spec.md",
+        "docs/features/arrival-inspection/spec.md",
+        "docs/features/dashboards/spec.md"
+      ]
+    }
+  ]
+}

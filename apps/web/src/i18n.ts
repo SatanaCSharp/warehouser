@@ -9,6 +9,7 @@ export const namespaces = [
   'common',
   'customer',
   'customer-order',
+  'dashboard',
   'errors',
   'home',
   'item',

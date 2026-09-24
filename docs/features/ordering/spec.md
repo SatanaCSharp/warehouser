@@ -21,6 +21,15 @@ The committed approach is a manual, human-decided order-formation loop that no e
 
 Six boundaries are stated here so they are not re-derived downstream. First, this release depends on `workspaces`: every operation it introduces names the Warehouse it applies to and is authorized by the Role the actor holds in that Warehouse, and an archived Warehouse authorizes none of the operations that change what it holds, while the watch capabilities continue to authorize reads of it on the same Permission terms as before, as `workspaces` already settles. Second, Items, Customer Orders, and Purchase Drafts are Warehouse-scoped without exception, so an organization running two sites for the same end customer records that customer's demand at each site separately; consolidating demand across a Workspace is an explicit non-goal, and the duplicate-ordering risk it leaves open is accepted rather than overlooked. Third, a Purchase Draft is a frozen record from Ready for Ordering onward, never a live projection of current demand — freezing captures the linked demand as it stood at that moment, so that when the demand afterwards changes the system reports a Drift Signal by comparing the two and leaves the draft alone, because the draft's value is that it says what was actually ordered; the single exception is Arrival Confirmation, which writes what arrived and to whom it was assigned onto the frozen draft and closes it. Fourth, linking is deliberately loose: a link carries a quantity the member states — how much of that line they intend for that customer — but that quantity is never forced to reconcile with the line quantity, with the Customer Order, or with any other link, and it claims no demand against another draft, because a human is making the coverage decision and the system's job is to show them what they are deciding against, not to arbitrate it. Allocation at arrival is the one place a quantity does bind, because by then the goods exist. Fifth, On-hand Quantity is a maintained figure with a reason attached, not a derived balance; this release provides no Stock Movement that could reconstruct or contradict it, and how the two are reconciled when the Stock feature lands is an open question in §8 rather than a settled one. Sixth, the §6 targets assume an order of magnitude of roughly 2 000 Items, 5 000 Unfulfilled Customer Orders, and 250 open Purchase Drafts per Warehouse, at which the demand and draft lists this feature presents are returned whole rather than in pages; outgrowing that scale is the explicit trigger to revisit §6 and introduce paging, not a silent regression against these targets.
 
+> **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** The fourth boundary
+> — that a link's quantity is never forced to reconcile and the system does not arbitrate it — now
+> admits one narrow read: a figure grained per Item may state the arithmetic between that Item's
+> promised total, its On-hand Quantity and the quantity ordered against it. Such a read asserts
+> nothing about any individual link and arbitrates nothing between them; it is `dashboards`'
+> Uncovered Quantity, reading what the Warehouse is holding and has ordered against one Item's
+> promised total rather than deciding anything a link left open. The member's coverage decision, and
+> the looseness of what a link claims, are unchanged.
+
 ## 2. Goals
 
 - Make Unfulfilled end-customer demand answerable inside the product, consolidated per Item and visible beside what the Transit Zone already holds, so the decision to order is made from one place instead of reconstructed each morning.
@@ -35,6 +44,17 @@ Six boundaries are stated here so they are not re-derived downstream. First, thi
 - Shipping or dispatching goods to the end customer is excluded because this release ends where the goods arrive; what leaves the Transit Zone is a separate capability with its own authorization surface.
 - Recording whether a Pre-receipt Requirement was actually met on arrival is excluded because verifying packaging and labelling is an inspection step this release does not provide; the requirement is stated for the supplier and the member judges the result with their eyes.
 - Consolidating demand across several Warehouses of one Workspace is excluded because the subject of every operation here is a resource a Warehouse owns, and reading one Warehouse's customer demand from another would cross the capability line the Workspace boundary draws.
+
+  > **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** This non-goal
+  > excludes pooling one Item's demand across Warehouses and excludes a Warehouse Member reaching
+  > another Warehouse's demand through a Warehouse membership; it does not forbid a read of
+  > aggregates over several Warehouses' Customer Orders whose authority is held at the Workspace
+  > level and never assembled from a Warehouse membership. Under that read no Item identity crosses
+  > a Warehouse boundary and no figure pools two Warehouses' demand into one number — each
+  > Warehouse's aggregate is set beside the others', not merged with them. This exception is
+  > reviewed together with the matching exceptions in `workspaces` and `arrival-inspection` because
+  > the three amend one authority boundary and move together as a single change requiring the
+  > Security Lead's review.
 
 ## 4. User stories
 
@@ -225,6 +245,13 @@ Six boundaries are stated here so they are not re-derived downstream. First, thi
 **Given** an authorized Warehouse Member holding `PURCHASE_DRAFTS:CREATE` in a Warehouse holding Unfulfilled demand
 **When** the member assembles a Purchase Draft of Items and quantities, links each line to none, one, or several of that Warehouse's Unfulfilled Customer Orders stating for each link how much of that line is intended for that customer, and states an Expected Arrival Date or leaves it unstated because they have not yet spoken to the supplier
 **Then** the system records the Purchase Draft in that Warehouse in the Draft state with each link and the quantity stated for it, together with the member who created it and when, and confirms it to the member
+
+> **Amended by [`dashboards`](../dashboards/spec.md#1-context) — 2026-09-21.** The Expected Arrival
+> Date means goods reaching the Transit Zone, so on a draft holding lines of both delivery modes it
+> speaks for the draft's Via Warehouse lines only; a Direct to Customer line's goods never reach the
+> Transit Zone, and the date says nothing about when they reach the customer.
+> `delivery-addresses` states what a Via Warehouse line's recorded ending is taken to mean against
+> it.
 
 ### AC-10a (US-05) — happy
 

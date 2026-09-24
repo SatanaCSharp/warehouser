@@ -9,6 +9,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AccessProjection } from '@warehouser/contracts/access';
 import type { WorkspaceContext } from '@warehouser/contracts/workspaces';
+import { WorkspacePermissionId } from '@warehouser/shared-types/enums';
 import type { WarehouseEntryVerdict } from 'guards/warehouse-entry.guard';
 import { authBecameAuthenticated } from 'modules/auth/store/auth.slice';
 import type { ReactElement } from 'react';
@@ -141,12 +142,23 @@ const renderAt = (
     path: ROUTES.WORKSPACE,
     component: () => homeContent,
   });
+  // dashboards T19 — a FLAT root sibling of the administration route, as the
+  // production declaration is: the Workspace Dashboard parents on the root so it
+  // inherits no capability guard (AC-15). Nesting it under `workspaceTestRoute`
+  // here would let the `/workspace` match answer the shell's context question
+  // and hide what these cases pin.
+  const workspaceDashboardTestRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: ROUTES.WORKSPACE_DASHBOARD,
+    component: () => homeContent,
+  });
   const router = createRouter({
     routeTree: rootRoute.addChildren([
       homeRoute,
       loginRoute,
       signUpRoute,
       workspaceTestRoute,
+      workspaceDashboardTestRoute,
       warehouseTestRoute.addChildren([warehouseIndexRoute]),
     ]),
     context: { store },
@@ -279,43 +291,6 @@ describe('RootLayout', () => {
     expect(toggle.className).toContain('sm:hidden');
   });
 
-  // T11 / CR-AC-18 — with no navigation list there is nothing for a drawer to
-  // contain, so the toggle that opens it must not render. Any context that
-  // renders no sidebar list must therefore render no toggle either, or the
-  // shell offers an affordance that opens an empty panel.
-  describe('the drawer toggle follows the sidebar list (CR-AC-18)', () => {
-    it.each<[string, { entry: string } & RenderExtras]>([
-      ['the no-context state at the root', { entry: ROUTES.HOME }],
-      [
-        'a Warehouse entry refusal',
-        { entry: WAREHOUSE_ADDRESS, verdict: 'refused' },
-      ],
-    ])('renders no drawer toggle in %s', async (_label, options) => {
-      stubShell();
-      renderAt(options.entry, authenticatedStore(), <p>Home content</p>, {
-        verdict: options.verdict,
-      });
-
-      // The switcher still renders — it is the only way out of both states.
-      await screen.findAllByRole('button', { name: /context switcher/iu });
-      expect(
-        screen.queryByRole('button', { name: 'Open navigation' }),
-      ).not.toBeInTheDocument();
-    });
-
-    it.each([
-      ['a Warehouse view', WAREHOUSE_ADDRESS],
-      ['the Workspace view', ROUTES.WORKSPACE],
-    ])('renders the drawer toggle in %s', async (_label, entry) => {
-      stubShell();
-      renderAt(entry, authenticatedStore());
-
-      expect(
-        await screen.findByRole('button', { name: 'Open navigation' }),
-      ).toBeInTheDocument();
-    });
-  });
-
   // T34 — the Warehouse switcher is added to the shell as one component
   // rendered twice: desktop (`n7Th5`) inside the 80px header, mobile
   // (`ciqhD`) in a full-width context bar directly beneath the 68px header
@@ -390,5 +365,108 @@ describe('RootLayout', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
     });
+
+    // dashboards T19 / `design-handoff.md` § Grid geometry — "There is no page
+    // heading, chip row, lede or notice above the grid", and the whole 639 px of
+    // the content region is spent on the Panels. The chooser is suppressed
+    // wherever a context is entered (CR-RG-03), which is the same predicate the
+    // rail reads: while the Workspace Dashboard read as no context it took a
+    // strip of that budget for a block that does not belong to the surface.
+    it('renders no warehouse chooser above the Workspace Dashboard', async () => {
+      stubShell({
+        effectiveWarehouseId: null,
+        workspacePermissionIds: [
+          WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH,
+        ],
+      });
+      renderAt(ROUTES.WORKSPACE_DASHBOARD, authenticatedStore());
+
+      await screen.findByRole('button', { name: 'Open navigation' });
+      expect(
+        screen.queryByRole('heading', {
+          name: 'Choose a warehouse to work in',
+        }),
+      ).not.toBeInTheDocument();
+    });
+  });
+});
+
+// T11 / CR-AC-18 — with no navigation list there is nothing for a drawer to
+// contain, so the toggle that opens it must not render. Any context that
+// renders no sidebar list must therefore render no toggle either, or the
+// shell offers an affordance that opens an empty panel.
+describe('the drawer toggle follows the sidebar list (CR-AC-18)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each<[string, { entry: string } & RenderExtras]>([
+    ['the no-context state at the root', { entry: ROUTES.HOME }],
+    [
+      'a Warehouse entry refusal',
+      { entry: WAREHOUSE_ADDRESS, verdict: 'refused' },
+    ],
+  ])('renders no drawer toggle in %s', async (_label, options) => {
+    stubShell();
+    renderAt(options.entry, authenticatedStore(), <p>Home content</p>, {
+      verdict: options.verdict,
+    });
+
+    // The switcher still renders — it is the only way out of both states.
+    await screen.findAllByRole('button', { name: /context switcher/iu });
+    expect(
+      screen.queryByRole('button', { name: 'Open navigation' }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The toggle follows the ENTRIES, not the context: each row below offers
+  // the actor at least one entry. The Warehouse row grants no Warehouse
+  // Permission on purpose — its Dashboard entry is ungated (AC-02), which is
+  // what keeps that rail and its toggle unaffected by the rule.
+  it.each<[string, string, Partial<WorkspaceContext>]>([
+    ['a Warehouse view', WAREHOUSE_ADDRESS, {}],
+    [
+      'the Workspace view',
+      ROUTES.WORKSPACE,
+      { workspacePermissionIds: [WorkspacePermissionId.WAREHOUSES_WATCH] },
+    ],
+    // dashboards T19 — the Workspace Dashboard is a Workspace view too, so it
+    // has a list and therefore a toggle. Its flat root parentage kept it from
+    // matching `/workspace`, which withheld both.
+    [
+      'the Workspace Dashboard',
+      ROUTES.WORKSPACE_DASHBOARD,
+      {
+        workspacePermissionIds: [
+          WorkspacePermissionId.WAREHOUSE_PERFORMANCE_WATCH,
+        ],
+      },
+    ],
+  ])('renders the drawer toggle in %s', async (_label, entry, overrides) => {
+    stubShell(overrides);
+    renderAt(entry, authenticatedStore());
+
+    expect(
+      await screen.findByRole('button', { name: 'Open navigation' }),
+    ).toBeInTheDocument();
+  });
+
+  // dashboards AC-15 — `/workspace/dashboard` declares no capability guard,
+  // so an actor whose Workspace Role carries no Workspace Permission reaches
+  // it by bookmark or stale link and is shown the denial AT the address.
+  // Both rail entries gate away for them, so there is no list, and a toggle
+  // that opens a drawer containing nothing is exactly what CR-AC-18 forbids.
+  //
+  // The switcher renders only once the Workspace context has resolved, so
+  // awaiting it is what makes the toggle's absence an answer rather than a
+  // first-paint coincidence.
+  it('renders no drawer toggle where the entered context offers no entry', async () => {
+    stubShell({ workspacePermissionIds: [] });
+    renderAt(ROUTES.WORKSPACE_DASHBOARD, authenticatedStore());
+
+    await screen.findAllByRole('button', { name: /context switcher/iu });
+    expect(
+      screen.queryByRole('button', { name: 'Open navigation' }),
+    ).not.toBeInTheDocument();
   });
 });

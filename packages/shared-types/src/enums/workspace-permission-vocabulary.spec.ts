@@ -43,6 +43,14 @@ const MIGRATION_WORKSPACE_PERMISSION_CATALOGUE = [
   // Workspace Capability beside renaming and archiving, so it is seeded at that level.
   // `assignable`, like every row here but the reserved one.
   'WAREHOUSES:ADDRESS_UPDATE',
+  // Extended after migration `01` by
+  // `apps/server/migrations/1786900100000-GrantDashboardPermissions.ts`
+  // (`dashboards` AC-21, AC-21a): observing Warehouse performance from the Workspace surface is a
+  // Workspace Capability beside renaming and archiving, so — like `WAREHOUSES:ADDRESS_UPDATE`
+  // before it — it is seeded at that level. `assignable`: a Workspace Owner must be able to
+  // delegate it to a custom Role. `WATCH`, not `OBSERVE` — `data-model.md` supersedes `sad.md` §5's
+  // working name; every read Permission in both catalogues uses `WATCH`.
+  'WAREHOUSE_PERFORMANCE:WATCH',
 ] as const;
 
 const RESERVED_WORKSPACE_PERMISSION_ID: (typeof MIGRATION_WORKSPACE_PERMISSION_CATALOGUE)[number] =

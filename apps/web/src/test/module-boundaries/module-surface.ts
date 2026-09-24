@@ -117,6 +117,13 @@ export const MODULE_SURFACE = {
   workspace: [
     // router.ts
     'modules/workspace/route',
+    // router.ts — the Workspace Dashboard's own route. The Dashboard is a
+    // sub-tree of this module rather than a module of its own: a Workspace
+    // capability exercised at the Workspace scope lives in the Workspace's
+    // module, and a module may carry several `route.tsx`/`page.tsx` pairs —
+    // `modules/auth/` holds `login/` and `sign-up/` and is still one module
+    // (`docs/system/guides/adding-a-web-module.md` §1).
+    'modules/workspace/dashboard/route',
   ],
 } as const satisfies Record<string, readonly string[]>;
 
@@ -167,6 +174,70 @@ export const WORKSPACE_MODULE_MANIFEST = [
   'components/workspace-administration/warehouses/WarehousesTab.spec.tsx',
   'components/workspace-administration/warehouses/WarehousesTab.tsx',
   'components/workspace-administration/warehouses/WithdrawWarehouseAccessDialog.tsx',
+  // dashboards remediation — the Workspace Dashboard, folded in from the
+  // short-lived `modules/workspace-dashboard`. It enforces Workspace
+  // invariants and is exercised at the Workspace scope, so the default in
+  // `docs/system/guides/adding-a-web-module.md` §1 places it in this module
+  // and the scope-of-exercise tiebreak has nothing to break. It is a sub-tree
+  // on the `modules/auth/login` pattern, carrying its own `route.tsx`,
+  // `page.tsx`, `api/`, `loaders/` and `components/`.
+  //
+  // The grid is the sole renderer of all four Panels, so they nest one level
+  // down in its own `components/` directory
+  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
+  'dashboard/api/workspace-dashboard-api.ts',
+  'dashboard/components/WorkspaceDashboardGrid.spec.tsx',
+  'dashboard/components/WorkspaceDashboardGrid.tsx',
+  'dashboard/components/components/OrderFlowPanel.spec.tsx',
+  'dashboard/components/components/OrderFlowPanel.tsx',
+  'dashboard/components/components/WorkspaceDashboardDenial.tsx',
+  'dashboard/components/components/demand-pressure-panel/DemandPressurePanel.spec.tsx',
+  'dashboard/components/components/demand-pressure-panel/DemandPressurePanel.tsx',
+  'dashboard/components/components/demand-pressure-panel/components/DemandPressureBar.tsx',
+  'dashboard/components/components/demand-pressure-panel/components/DemandPressureOutstanding.tsx',
+  'dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel.spec.tsx',
+  'dashboard/components/components/purchasing-spread-panel/PurchasingSpreadPanel.tsx',
+  'dashboard/components/components/purchasing-spread-panel/components/HeatGrid.spec.tsx',
+  'dashboard/components/components/purchasing-spread-panel/components/HeatGrid.tsx',
+  'dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel.spec.tsx',
+  'dashboard/components/components/receipt-reliability-panel/ReceiptReliabilityPanel.tsx',
+  'dashboard/components/components/receipt-reliability-panel/components/BubblePlot.spec.tsx',
+  'dashboard/components/components/receipt-reliability-panel/components/BubblePlot.tsx',
+  // dashboards remediation — as above, for the Workspace surface's four reads
+  // and the single Permission that admits all of them.
+  'dashboard/hooks/queries/useDemandPressurePanel.ts',
+  'dashboard/hooks/queries/useOrderFlowPanel.ts',
+  'dashboard/hooks/queries/usePurchasingSpreadPanel.ts',
+  'dashboard/hooks/queries/useReceiptReliabilityPanel.ts',
+  'dashboard/loaders/workspace-dashboard.loader.spec.ts',
+  'dashboard/loaders/workspace-dashboard.loader.ts',
+  'dashboard/page.spec.tsx',
+  'dashboard/page.tsx',
+  'dashboard/route.spec.tsx',
+  'dashboard/route.tsx',
+  // dashboards remediation — the Demand Pressure band ids and tokens. A
+  // component file exports components and nothing else, and a file declaring
+  // no hook belongs in `utils/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/demand-pressure-series.ts',
+  // dashboards remediation — this surface's share of `design-handoff.md`
+  // § Grid geometry: its 311px row 1 and 312px row 2, what Demand Pressure and
+  // Purchasing Spread may spend on their lists, and the two row heights their
+  // own marks fix (a 12px bar over its printed band figures; an 84 x 30 heat
+  // cell). The rule those budgets are spent against is
+  // `shared/utils/panel-list-density.ts`, shared with the Warehouse Dashboard.
+  // Constants and no hook, so `utils/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/panel-list-budget.ts',
+  // dashboards remediation — the Receipt Reliability scatter's pixel geometry
+  // and label-collision placement, with its colocated spec. ADR 0002 names
+  // this arithmetic as the layout the repository owns and asks for it to be
+  // unit-tested directly rather than through a rendered chart; it declares no
+  // hook, so `utils/` is its directory
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'dashboard/utils/receipt-reliability-plot.spec.ts',
+  'dashboard/utils/receipt-reliability-plot.ts',
+  'dashboard/utils/workspace-panel-reading.ts',
   // T12 / global-loader CH-05, CH-13 — the route-scoped projection that turns
   // the Workspace context guaranteed by `workspaceRoute.beforeLoad` into a
   // non-optional value, and its colocated spec. It derives from state already
@@ -210,12 +281,83 @@ export const WORKSPACE_MODULE_MANIFEST = [
  * can tell "the administration slice left" from "the module was dissolved".
  */
 export const WAREHOUSE_MODULE_MANIFEST = [
-  'components/DesignSystemExample.spec.tsx',
-  'components/DesignSystemExample.tsx',
+  'api/warehouse-dashboard-api.ts',
+  // T17 — the two row-oriented Panels, extracted from the grid's provisional
+  // private render helpers into their own files, each drawn at the approved
+  // handoff's fidelity (AC-03, AC-05, AC-12, AC-25). They stay inside the
+  // `components/dashboard/` grouping rather than nesting under the grid: the
+  // grouping is named for the domain its views address, not for the component
+  // that renders them
+  // (`docs/system/adr/18-08-2026-scope-of-exercise-placement-tiebreak.md`
+  // § "A name states the domain addressed", and
+  // `docs/system/guides/placing-web-components.md` § "Grouping owned
+  // components by domain" — four Panels plus the grid is under the half-dozen
+  // at which a further level starts paying for itself).
+  // T18 — the two remaining chart Panels, completed the same way (AC-07,
+  // AC-08a, AC-10, AC-11).
+  'components/dashboard/WarehouseDashboardGrid.spec.tsx',
+  'components/dashboard/WarehouseDashboardGrid.tsx',
+  'components/dashboard/components/PurchasingPipelinePanel.spec.tsx',
+  'components/dashboard/components/PurchasingPipelinePanel.tsx',
+  'components/dashboard/components/WarehouseDashboardDenial.tsx',
+  'components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel.spec.tsx',
+  'components/dashboard/components/arrival-timing-panel/ArrivalTimingPanel.tsx',
+  'components/dashboard/components/arrival-timing-panel/components/ColumnPlot.spec.tsx',
+  'components/dashboard/components/arrival-timing-panel/components/ColumnPlot.tsx',
+  // dashboards remediation — the grid is the sole renderer of all four
+  // Panels, so they nest one level down in its own `components/`
+  // directory rather than sitting beside it
+  // (`docs/system/guides/placing-web-components.md` § "The nesting rule").
+  // dashboards remediation — the Panel presents a collection of records, so it
+  // is drawn with HeroUI's `Table`
+  // (`docs/system/adr/27-08-2026-heroui-table-for-web-data-tables.md`
+  // §Decision). The collection model caches a row's elements per record, so
+  // each cell renders a component that reads its own translations and locale
+  // formatting rather than an expression closing over them (§Decision 2).
+  'components/dashboard/components/coverage-gap-panel/CoverageGapPanel.spec.tsx',
+  'components/dashboard/components/coverage-gap-panel/CoverageGapPanel.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapBar.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapItemLabel.tsx',
+  'components/dashboard/components/coverage-gap-panel/components/CoverageGapQuantity.tsx',
+  'components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel.spec.tsx',
+  'components/dashboard/components/reason-concentration-panel/ReasonConcentrationPanel.tsx',
+  'components/dashboard/components/reason-concentration-panel/components/ReasonConcentrationLabel.tsx',
+  'components/dashboard/components/reason-concentration-panel/components/ReasonConcentrationQuantity.tsx',
+  'components/dashboard/components/reason-concentration-panel/components/ReasonConcentrationRefused.tsx',
   'hooks/effects/useRecordWarehouseEntry.spec.tsx',
   'hooks/effects/useRecordWarehouseEntry.ts',
+  // dashboards remediation — the four Panel reads and the Permission sets that
+  // admit them. A server-state read is filed in `hooks/queries/`, and the gate
+  // belongs to the read it gates
+  // (`docs/system/guides/placing-web-hooks.md` §1–§2).
+  'hooks/queries/useArrivalTimingPanel.ts',
+  'hooks/queries/useCoverageGapPanel.ts',
+  'hooks/queries/usePurchasingPipelinePanel.ts',
+  'hooks/queries/useReasonConcentrationPanel.ts',
+  'loaders/warehouse-dashboard.loader.spec.ts',
+  'loaders/warehouse-dashboard.loader.ts',
+  'page.spec.tsx',
   'page.tsx',
   'route.tsx',
+  // dashboards remediation — the Coverage Gap series ids and token names. A
+  // component file exports components and nothing else
+  // (`react/only-export-components`), and a file that declares no hook
+  // belongs in `utils/` (`docs/system/guides/placing-web-hooks.md` §3).
+  'utils/coverage-gap-series.ts',
+  // dashboards remediation — this surface's share of `design-handoff.md`
+  // § Grid geometry: the 355px row 1 and what each of its two row-oriented
+  // Panels may spend on its list. The row-density *rule* those budgets are
+  // spent against moved to `shared/utils/panel-list-density.ts` once the
+  // Workspace Dashboard's Panels became its second consumer — it is generic
+  // and no domain entity owns it, which is the promotion test in
+  // `docs/system/frontend-architecture.md` § Source structure and
+  // `docs/system/guides/placing-web-hooks.md` §3. What stays here is the part
+  // that is this Dashboard's own. Constants and no hook, so `utils/`.
+  'utils/panel-list-budget.ts',
+  // dashboards remediation — the Panel-standing type four query hooks return.
+  // A type and no hook, so `utils/` rather than `hooks/`
+  // (`docs/system/guides/placing-web-hooks.md` §3).
+  'utils/panel-reading.ts',
 ] as const;
 
 /**

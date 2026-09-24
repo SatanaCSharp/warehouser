@@ -453,18 +453,40 @@ describe('readiness removal — the route declarations (CR-AC-13, CR-AC-02, CR-A
   });
 
   // -----------------------------------------------------------------------
-  // 6. `warehouseDashboardRoute` gained no loader
+  // 6. `warehouseDashboardRoute` awaits its datasets and owns nothing else
   // -----------------------------------------------------------------------
 
   /**
-   * CR-AC-15's dashboard row. `WarehousePage` renders `DesignSystemExample`
-   * and reads no dataset, so the parent's `pendingComponent` is the whole of
-   * its readiness — §5.1 gives this route "none" in every column.
+   * CR-AC-15's dashboard row, **amended by `dashboards` T16**.
+   *
+   * As written, this row gave the route "none" in every column, and its
+   * rationale was that `WarehousePage` rendered `DesignSystemExample` and read
+   * no dataset — so the parent's `pendingComponent` was the whole of its
+   * readiness. T16 deleted that placeholder. The destination now paints four
+   * server-read Panels, and first-paint readiness of a destination belongs to
+   * its route (`docs/system/frontend-architecture.md` §Route), so the route
+   * awaits every Panel the actor's Permissions admit through
+   * `loaders/warehouse-dashboard.loader.ts` (`dashboards` sad.md §6.1).
+   *
+   * **Two columns move, and the second is not decoration.**
+   * `guides/adding-a-web-module.md` §5 pairs a loader with an `errorComponent`
+   * "so the awaited window and a failed primary read both paint", and here
+   * that is observable rather than formal: wired without one, a rejected
+   * projection read left this match in `error` with no boundary of its own and
+   * painted an **empty outlet** under the shell — no denial, no error state,
+   * nothing. With it, the failed read paints `RouteErrorState`.
+   *
+   * **The remaining four columns stay `null`, and that is the claim this row
+   * was written for.** `pendingComponent` in particular: the parent
+   * `warehouseRoute` already paints this branch's await window at
+   * `pendingMs: 150`, and CR-AC-13 forbids the branch mounting a second
+   * `RoutePendingState` beneath the first — so the index child still owns no
+   * readiness affordance of its own.
    */
-  it('leaves warehouseDashboardRoute with no loader and no readiness contract of its own (CR-AC-15)', () => {
+  it('gives warehouseDashboardRoute its dataset loader and no readiness contract of its own (CR-AC-15)', () => {
     expect(declarationOf('modules/warehouse/route.tsx')).toStrictEqual({
-      errorComponent: null,
-      loader: null,
+      errorComponent: 'RouteErrorState',
+      loader: 'loadWarehouseDashboard',
       pendingComponent: null,
       pendingMinMs: null,
       pendingMs: null,
@@ -747,15 +769,20 @@ describe('readiness removal — declarative permission gating is unchanged (CR-R
     'shared/components/WarehousePermissionGate.tsx': 1,
     'shared/components/WorkspacePermissionGate.tsx': 1,
     'shared/hooks/projections/usePermittedItems.ts': 1,
-    'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
     // The sidebar's gates moved with its entries when `Sidebar.tsx` was split
-    // into `shared/layouts/sidebar/`: each context's entry set now owns the
-    // gates its own entries carry, and the shell that selects between the two
-    // sets carries none. The Warehouse count is delivery-addresses T21's six
-    // gated entries (five gates, opened and closed, plus the import) and the
-    // Workspace count is AC-30's single one.
-    'shared/layouts/sidebar/components/WarehouseNavEntries.tsx': 12,
-    'shared/layouts/sidebar/components/WorkspaceNavEntries.tsx': 4,
+    // into `shared/layouts/sidebar/`, and moved again — from the element form
+    // to the descriptor form, §1 to §2 of the same decision — when the shell
+    // had to know whether the entered context offers this actor any entry at
+    // all before it renders the rail and the drawer toggle around it
+    // (CR-AC-18, dashboards AC-15). No gate was added, removed or widened by
+    // that move: each entry still names the same Permissions, now in the
+    // `permission` field `usePermittedItems` / `useWorkspacePermittedItems`
+    // reads, so one list answers both "which entries render" and "is there a
+    // list". Each count is the filter's two import lines plus its one call;
+    // the entry sets that render the result carry none.
+    'shared/hooks/projections/useWarehouseNavEntries.ts': 4,
+    'shared/hooks/projections/useWorkspaceNavEntries.ts': 4,
+    'shared/hooks/projections/useWorkspacePermittedItems.ts': 1,
   };
 
   it('keeps every gate and descriptor call site', () => {
